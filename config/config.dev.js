@@ -34,7 +34,7 @@ module.exports = appInfo => {
       dialect: 'mysql',
       host: '127.0.0.1',
       port: 3306,
-      database: 'edu_platform',
+      database: 'edu_platform_test',
       username: 'alex',
       password: 'alex1mysql'
     },

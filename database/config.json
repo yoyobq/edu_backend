@@ -1,0 +1,23 @@
+{
+  "development": {
+    "username": "alex",
+    "password": "alex1mysql",
+    "database": "edu_platform_test",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "test": {
+    "username": "alex",
+    "password": "alex1mysql",
+    "database": "edu_platform_test",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "production": {
+    "username": "alex",
+    "password": "alex1mysql",
+    "database": "edu_platform",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  }
+}
