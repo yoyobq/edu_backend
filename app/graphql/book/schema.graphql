@@ -1,0 +1,19 @@
+# GraphQL 字符串中的注释以 # 号开头
+
+# type Book  定义了数据源中每本书籍的所有可查询字段
+type Book {
+  title: String
+  author: String
+}
+
+type Books {
+  books: [Book!]
+}
+
+# Query 类型它列出了客户端可以执行的所有可用查询，以及每个查询的返回类型。
+# 此处 books 查询将返回一个包含了任意本 book 的数组
+type Query {
+  books: [Book]
+  book: Book
+}
+
