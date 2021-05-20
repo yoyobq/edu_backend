@@ -18,6 +18,7 @@ module.exports = {
     });
   },
 
+  // eslint-disable-next-line no-unused-vars
   down: async (queryInterface, Sequelize) => {
     /**
      * Add reverting commands here.
@@ -26,5 +27,5 @@ module.exports = {
      * await queryInterface.dropTable('users');
      */
     await queryInterface.dropTable('users');
-  }
+  },
 };

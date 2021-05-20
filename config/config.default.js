@@ -36,7 +36,7 @@ module.exports = appInfo => {
       port: 3306,
       database: 'edu_platform',
       username: 'alex',
-      password: 'alex1mysql'
+      password: 'alex1mysql',
     },
 
     graphql: {
@@ -52,8 +52,7 @@ module.exports = appInfo => {
       // graphQL 路由前的拦截器
       // onPreGraphQL: function* (ctx) {},
       // 开发工具 graphiQL 路由前的拦截器，建议用于做权限操作(如只提供开发者使用)
-      async onPreGraphiQL(ctx) {},
-      async onPreGraphiQL(ctx) { },
+      // async onPreGraphiQL(ctx) {},
       // apollo server的透传参数，参考[文档](https://www.apollographql.com/docs/apollo-server/api/apollo-server/#parameters)
       // apolloServerOptions: {
       //   rootValue,

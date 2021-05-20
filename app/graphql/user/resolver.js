@@ -2,7 +2,7 @@
 
 // module.exports = {
 //   Query: {
-//     book(root, { id }, ctx) {
+//     user(root, { id }, ctx) {
 //       return ctx.connector.user.fetchById(id);
 //     },
 //   },
@@ -16,12 +16,12 @@
 // 因为 books 数组本来就是硬编码，所以这是一个简单解析器示例
 module.exports = {
   Query: {
-    books: (root, _, ctx) => {
-      return ctx.connector.book.fetchAll();
+    users: (root, _, ctx) => {
+      return ctx.connector.user.fetchAll();
     },
 
-    book: (root, { title }, ctx) => {
-      const res = ctx.connector.book.fetchByTitle(title);
+    user: (root, { id }, ctx) => {
+      const res = ctx.connector.user.fetchById(id);
       return res[0];
     },
   },
