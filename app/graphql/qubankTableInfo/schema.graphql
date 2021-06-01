@@ -1,0 +1,26 @@
+# GraphQL 字符串中的注释以 # 号开头
+
+# type QubankTableInfo  定义了数据源中用户实体所有可查询字段
+type QubankTableInfo {
+  id: ID!
+  table_name: String
+  table_info: String
+  test_item_str: String
+  created_at: String
+  updated_at: String
+  set_user_id: Int
+  remark: String
+}
+
+type QubankTableInfos {
+  QubankTableInfos: [QubankTableInfo]
+}
+
+# Query 类型它列出了客户端可以执行的所有可用查询，以及每个查询的返回类型。
+extend type Query {
+  # 此处 qubankTableInfos 查询将返回一个包含了任意 qubankTableInfo 的数组
+  qubankTableInfos: [QubankTableInfo]
+  # 此处带参数的 qubankTableInfo 查询，可以根据id返回包含了某个用户的具体信息的对象
+  qubankTableInfo(id: Int): QubankTableInfo
+}
+

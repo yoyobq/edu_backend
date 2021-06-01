@@ -15,9 +15,9 @@ module.exports = app => {
     updated_at: DATE,
   });
 
-  User.prototype.associate = function() {
-    app.model.User.hasMany(app.model.Post, { as: 'posts' });
-  };
+  // User.prototype.associate = function() {
+  //   app.model.User.hasMany(app.model.Post, { as: 'posts' });
+  // };
 
   return User;
 };

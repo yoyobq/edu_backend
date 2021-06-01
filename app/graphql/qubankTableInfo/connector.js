@@ -1,6 +1,6 @@
 'use strict';
 
-class UserConnector {
+class QubankTableInfoConnector {
   constructor(ctx) {
     this.ctx = ctx;
   }
@@ -11,18 +11,18 @@ class UserConnector {
       // limit: ctx.helper.parseInt(ctx.query.limit),
       // offset: ctx.helper.parseInt(ctx.query.offset),
     };
-    const users = await ctx.service.user.list(query);
+    const qubankTableInfos = await ctx.service.qubankTableInfo.list(query);
     // 此处返回的数据类型应该与schema中的定义一致
-    return users;
+    return qubankTableInfos;
   }
 
   async fetchById(id) {
     const ctx = this.ctx;
-    const user = await ctx.service.user.find(ctx.helper.parseInt(id));
+    const qubankTableInfo = await ctx.service.qubankTableInfo.find(ctx.helper.parseInt(id));
 
-    return user;
+    return qubankTableInfo;
   }
 }
 
-module.exports = UserConnector;
+module.exports = QubankTableInfoConnector;
 

@@ -2,10 +2,10 @@
 
 const Service = require('egg').Service;
 
-class User extends Service {
+class QubankTableInfo extends Service {
   async list({ offset = 0, limit = 10 }) {
     // 21-5-20 此处的 findAndCountAll 是 sequelize 中的查询方法
-    const res = await this.ctx.model.User.findAndCountAll({
+    const res = await this.ctx.model.QubankTableInfo.findAndCountAll({
       offset,
       limit,
       order: [[ 'created_at', 'desc' ], [ 'id', 'desc' ]],
@@ -16,22 +16,22 @@ class User extends Service {
 
   async find(id) {
     // findByPk 也是
-    const user = await this.ctx.model.User.findByPk(id);
+    const user = await this.ctx.model.QubankTableInfo.findByPk(id);
     if (!user) {
-      this.ctx.throw(404, 'user not found');
+      this.ctx.throw(404, 'QubankTableInfo not found');
     }
     return user;
   }
 
   async create(user) {
     // create 也是
-    return this.ctx.model.User.create(user);
+    return this.ctx.model.QubankTableInfo.create(user);
   }
 
   async update({ id, updates }) {
-    const user = await this.ctx.model.User.findByPk(id);
+    const user = await this.ctx.model.QubankTableInfo.findByPk(id);
     if (!user) {
-      this.ctx.throw(404, 'user not found');
+      this.ctx.throw(404, 'QubankTableInfo not found');
     }
 
     // update 也是
@@ -39,9 +39,9 @@ class User extends Service {
   }
 
   async del(id) {
-    const user = await this.ctx.model.User.findByPk(id);
+    const user = await this.ctx.model.QubankTableInfo.findByPk(id);
     if (!user) {
-      this.ctx.throw(404, 'user not found');
+      this.ctx.throw(404, 'QubankTableInfo not found');
     }
 
     // destory 也是
@@ -49,4 +49,4 @@ class User extends Service {
   }
 }
 
-module.exports = User;
+module.exports = QubankTableInfo;

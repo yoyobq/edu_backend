@@ -1,12 +1,12 @@
 # GraphQL 字符串中的注释以 # 号开头
 
-# type Book  定义了数据源中每本书籍的所有可查询字段
+# type User  定义了数据源中用户实体所有可查询字段
 type User {
   id: ID!
-  name: String,
-  age: Int,
-  created_at: String,
-  updated_at: String,
+  name: String
+  age: Int
+  created_at: String
+  updated_at: String
 }
 
 type Users {
@@ -14,9 +14,13 @@ type Users {
 }
 
 # Query 类型它列出了客户端可以执行的所有可用查询，以及每个查询的返回类型。
-# 此处 users 查询将返回一个包含了任意 user 的数组
-type Query {
+extend type Query {
+  # 此处 users 查询将返回一个包含了任意 user 的数组
   users: [User]
-  user: User
+  # 此处带参数的 user 查询，可以根据id返回包含了某个用户的具体信息的对象
+  user(id: Int): User
 }
 
+extend type Mutation {
+  addUser(password: String, name: String): User
+}

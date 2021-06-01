@@ -1,5 +1,9 @@
 'use strict';
 
+/* 21-5-20 这是安装了 sequelize 后自动生成的文件，具体配置细节还没有搞懂
+ * 简单说就是通过配置，要求所有数据库 Migrations (移植) 相关的内容都放在 database 目录下
+ */
+
 const path = require('path');
 
 module.exports = {
