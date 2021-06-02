@@ -5,22 +5,22 @@ class QuestionConnector {
     this.ctx = ctx;
   }
 
-  async fetchAll() {
+  async fetchAll(tableName) {
     const ctx = this.ctx;
     const query = {
       limit: ctx.helper.parseInt(ctx.query.limit),
       offset: ctx.helper.parseInt(ctx.query.offset),
-      tableName: ctx.query.tableName,
+      tableName,
     };
     const questions = await ctx.service.question.list(query);
     // 此处返回的数据类型应该与schema中的定义一致
     return questions;
   }
 
-  async fetchById(id) {
+  async fetchById(id, tableName) {
     const ctx = this.ctx;
-    const question = await ctx.service.question.find(ctx.helper.parseInt(id));
-    console.log(question);
+    const question = await ctx.service.question.find(ctx.helper.parseInt(id), tableName);
+
     return question;
   }
 }

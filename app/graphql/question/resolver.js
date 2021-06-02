@@ -7,12 +7,12 @@
 // 因为 questions 数组本来就是硬编码，所以这是一个简单解析器示例
 module.exports = {
   Query: {
-    questions: (root, _, ctx) => {
-      return ctx.connector.question.fetchAll();
+    questions: (root, { tableName }, ctx) => {
+      return ctx.connector.question.fetchAll(tableName);
     },
 
-    question: (root, { id }, ctx) => {
-      const res = ctx.connector.question.fetchById(id);
+    question: (root, { id, tableName }, ctx) => {
+      const res = ctx.connector.question.fetchById(id, tableName);
       return res;
     },
   },

@@ -25,7 +25,7 @@ type Questions {
 # Query 类型它列出了客户端可以执行的所有可用查询，以及每个查询的返回类型。
 # 此处 questions 查询将返回一个包含了任意本 question 的数组
 extend type Query {
-  questions: [Question]
-  question(id: Int): Question
+  questions(tableName: String): [Question]
+  question(id: Int, tableName: String): Question
 }
 

@@ -14,8 +14,8 @@ const Service = require('egg').Service;
 const { QueryTypes } = require('sequelize');
 
 class Questions extends Service {
-  async list({ offset = 0, limit = 10 }) {
-    const tableName = 'qubank_wlgjg_2104';
+  async list({ offset = 0, limit = 10, tableName }) {
+    // const tableName = 'qubank_wlgjg_2104';
 
     // 这么写是为了方便看引用字段，也防止有人篡改 tableName 造成数据泄露
     const sqlStr = `
@@ -46,8 +46,8 @@ class Questions extends Service {
     return questions;
   }
 
-  async find(id) {
-    const tableName = 'qubank_wlgjg_2104';
+  async find(id, tableName) {
+    // const tableName = 'qubank_wlgjg_2104';
     const sqlStr = `
     SELECT
       \`id\`,
