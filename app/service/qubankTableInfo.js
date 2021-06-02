@@ -16,11 +16,11 @@ class QubankTableInfo extends Service {
 
   async find(id) {
     // findByPk 也是
-    const user = await this.ctx.model.QubankTableInfo.findByPk(id);
-    if (!user) {
+    const tableInfo = await this.ctx.model.QubankTableInfo.findByPk(id);
+    if (!tableInfo) {
       this.ctx.throw(404, 'QubankTableInfo not found');
     }
-    return user;
+    return tableInfo;
   }
 
   async create(user) {

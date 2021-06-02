@@ -3,6 +3,7 @@
 module.exports = app => {
   const { STRING, INTEGER, DATE, NOW } = app.Sequelize;
 
+  const tbn = 'qubank_table_info';
   const QubankTableInfo = app.model.define('qubank_table_info', {
     id: {
       type: INTEGER,
@@ -27,7 +28,9 @@ module.exports = app => {
     set_user_id: INTEGER,
     remark: STRING(255),
   }, {
-    freezeTableName: true,
+    // freezeTableName: true,
+    timestamps: true,
+    tableName: tbn,
   });
 
   // User.prototype.associate = function() {

@@ -1,0 +1,31 @@
+# GraphQL 字符串中的注释以 # 号开头
+
+# type Question  定义了数据源中每本书籍的所有可查询字段
+type Question {
+  id: ID!,
+  custom_id: Int!,
+  topic: String!,
+  a: String,
+  b: String,
+  c: String,
+  d: String,
+  e: String,
+  f: String,
+  g: String,
+  answer: String!,
+  type: String,
+  chapter: String,
+  pic_path: String
+}
+
+type Questions {
+  questions: [Question!]
+}
+
+# Query 类型它列出了客户端可以执行的所有可用查询，以及每个查询的返回类型。
+# 此处 questions 查询将返回一个包含了任意本 question 的数组
+extend type Query {
+  questions: [Question]
+  question(id: Int): Question
+}
+
