@@ -14,11 +14,9 @@ const Service = require('egg').Service;
 const { QueryTypes } = require('sequelize');
 
 class Questions extends Service {
-  async list({ offset = 0, limit = 10, tableName }) {
-    // const tableName = 'qubank_wlgjg_2104';
-
+  async list({ offset = 0, limit = 1000, tableName, type }) {
     // 这么写是为了方便看引用字段，也防止有人篡改 tableName 造成数据泄露
-    const sqlStr = `
+    const baseStr = `
       SELECT
         \`id\`,
         \`custom_id\`,
@@ -32,22 +30,23 @@ class Questions extends Service {
         \`g\`,
         \`answer\`,
         \`type\`,
+        \`chapter_no\`,
         \`chapter\`,
         \`pic_path\`
       FROM
         \`${tableName}\`
-      ORDER BY
-        \`custom_id\` ASC
-      LIMIT
-        ${offset}, ${limit}
     `;
 
+    const conditionStr = type ? `WHERE \`type\` = '${type}'` : '';
+    const sortStr = ' ORDER BY `custom_id` ASC';
+    const limitStr = ` LIMIT ${offset}, ${limit};`;
+
+    const sqlStr = baseStr + conditionStr + sortStr + limitStr;
     const questions = await this.app.model.query(sqlStr, { type: QueryTypes.SELECT });
     return questions;
   }
 
   async find(id, tableName) {
-    // const tableName = 'qubank_wlgjg_2104';
     const sqlStr = `
     SELECT
       \`id\`,
@@ -62,6 +61,7 @@ class Questions extends Service {
       \`g\`,
       \`answer\`,
       \`type\`,
+      \`chapter_no\`,
       \`chapter\`,
       \`pic_path\`
     FROM

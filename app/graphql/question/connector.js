@@ -5,15 +5,19 @@ class QuestionConnector {
     this.ctx = ctx;
   }
 
-  async fetchAll(tableName) {
+  async fetchAll(tableName, type = null) {
     const ctx = this.ctx;
     const query = {
       limit: ctx.helper.parseInt(ctx.query.limit),
       offset: ctx.helper.parseInt(ctx.query.offset),
-      tableName,
+
+      // 自定义前缀，防止用户猜测 tableName
+      tableName: 'qubank_' + tableName,
+
+      // 规定题型 'sin' 'mul' 'jug'
+      type,
     };
     const questions = await ctx.service.question.list(query);
-    // 此处返回的数据类型应该与schema中的定义一致
     return questions;
   }
 

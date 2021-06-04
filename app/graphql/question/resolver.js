@@ -7,8 +7,8 @@
 // 因为 questions 数组本来就是硬编码，所以这是一个简单解析器示例
 module.exports = {
   Query: {
-    questions: (root, { tableName }, ctx) => {
-      return ctx.connector.question.fetchAll(tableName);
+    questions: (root, { tableName, type }, ctx) => {
+      return ctx.connector.question.fetchAll(tableName, type);
     },
 
     question: (root, { id, tableName }, ctx) => {

@@ -78,12 +78,19 @@ module.exports = appInfo => {
   config.keys = appInfo.name + '_1620227052763_4470';
 
   // add your middleware config here
-  config.middleware = [ 'graphql' ];
+  config.middleware = [ 'errorHandler', 'graphqlErrorHandler', 'validateHandler', 'graphql' ];
+  // middleware: [ 'errorHandler', 'validateHandler' ],
 
   // add your user config here
   const userConfig = {
     // myAppName: 'egg',
+
+    // 只对 /graphql 前缀的 url 路径生效
+    graphqlErrorHandler: {
+      match: '/graphql',
+    },
   };
+
 
   return {
     ...config,

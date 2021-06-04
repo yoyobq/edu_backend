@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = app => {
-  const { STRING, INTEGER, DATE } = app.Sequelize;
+  const { STRING, INTEGER } = app.Sequelize;
 
   const User = app.model.define('user', {
     id: {
@@ -13,8 +13,8 @@ module.exports = app => {
     },
     name: STRING(30),
     age: INTEGER,
-    created_at: DATE,
-    updated_at: DATE,
+    // created_at: DATE,
+    // updated_at: DATE,
     // 配合 paranoid 实现软删除
     // deleted_at: DATE,
   }, {
