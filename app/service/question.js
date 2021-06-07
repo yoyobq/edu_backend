@@ -46,7 +46,7 @@ class Questions extends Service {
     return questions;
   }
 
-  async find(id, tableName) {
+  async find({ id, tableName }) {
     const sqlStr = `
     SELECT
       \`id\`,

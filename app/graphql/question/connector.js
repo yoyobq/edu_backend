@@ -23,7 +23,15 @@ class QuestionConnector {
 
   async fetchById(id, tableName) {
     const ctx = this.ctx;
-    const question = await ctx.service.question.find(ctx.helper.parseInt(id), tableName);
+
+    tableName = 'qubank_' + tableName;
+
+    const query = {
+      id: ctx.helper.parseInt(id),
+      tableName,
+    };
+
+    const question = await ctx.service.question.find(query);
 
     return question;
   }

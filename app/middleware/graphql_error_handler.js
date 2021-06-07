@@ -22,6 +22,7 @@ module.exports = () => {
       // 数据发送到
       // console.log(host);
       // 数据来自于
+      // console.log(ctx.request);
       // console.log(origin);
 
       if (origin.indexOf(host) === -1) {
@@ -29,10 +30,10 @@ module.exports = () => {
         // console.log('不是本eggjs服务发起，这是一次外部查询，需要封装反馈数据');
         // 重新封装 graphql 的错误信息，抛出标准的error，方便前端统一处理
         const body = JSON.parse(ctx.body);
-        console.log(body);
+        // console.log(body);
 
         if (body.errors) {
-          console.log('-------error msg-------');
+          console.log('-------Graphql Middleware Error Msg-------');
           console.log(body.errors[0]);
 
           // 2021-6-5补充，突然觉得重新封装未必必要，默认的接口反馈形式是
