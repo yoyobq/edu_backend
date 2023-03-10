@@ -32,7 +32,8 @@ class Questions extends Service {
         \`type\`,
         \`chapter_no\`,
         \`chapter\`,
-        \`pic_path\`
+        \`pic_path\`,
+        \`remark\`
       FROM
         \`${tableName}\`
     `;
@@ -64,6 +65,7 @@ class Questions extends Service {
       \`chapter_no\`,
       \`chapter\`,
       \`pic_path\`
+      \`remark\`
     FROM
       \`${tableName}\`
     WHERE

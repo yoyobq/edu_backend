@@ -16,7 +16,8 @@ type Question {
   type: String,
   chapter_no: Int,
   chapter: String,
-  pic_path: String
+  pic_path: String,
+  remark: String
 }
 
 type Questions {

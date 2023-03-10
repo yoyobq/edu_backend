@@ -4,7 +4,8 @@
 module.exports = {
   Query: {
     qubankTableInfos: (root, _, ctx) => {
-      return ctx.connector.qubankTableInfo.fetchAll();
+      const res = ctx.connector.qubankTableInfo.fetchAll();
+      return res;
     },
 
     qubankTableInfo: (root, { id }, ctx) => {

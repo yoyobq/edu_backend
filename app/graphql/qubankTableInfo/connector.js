@@ -13,6 +13,10 @@ class QubankTableInfoConnector {
     };
     const qubankTableInfos = await ctx.service.qubankTableInfo.list(query);
     // 此处返回的数据类型应该与schema中的定义一致
+    qubankTableInfos.forEach(element => {
+      element.dataValues.testItemStr = element.dataValues.testItemStr.split(',');
+    });
+
     return qubankTableInfos;
   }
 
