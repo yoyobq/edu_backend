@@ -1,0 +1,72 @@
+# 当你使用一些第三方的库来实现自定义类型时，需要在 GraphQL Schema 文件中定义这个类型。
+scalar DateTime
+
+# 用户账户信息
+type Account {
+  # 用户 ID
+  id: ID!
+  # 账号名
+  loginName: String!
+  # 账号 Email
+  loginEmail: String
+  # 密码
+  loginPassword: String!
+  # 最近 5 次登录记录
+  recentLoginHistory: [LoginHistory]
+  # 创建时间
+  createdAt: DateTime!
+  # 更新时间
+  updatedAt: DateTime!
+  # 用户状态 "ACTIVE=1"、"BANNED=2"、"DELETED=3"
+  status: Int
+}
+
+# 登录记录
+type LoginHistory {
+  # 登录时间
+  loginTime: DateTime!
+  # 登录 IP
+  loginIP: String!
+}
+
+# 查询参数
+input QueryParams {
+  # 搜索关键字
+  keyword: String
+  # 分页参数
+  pagination: PaginationInput
+}
+
+# 修改参数
+input UpdateParams {
+  # 用户 ID
+  id: ID!
+  # 账号名
+  loginName: String
+  # 账号 Email
+  loginEmail: String
+  # 密码
+  loginPassword: String
+}
+
+# 分页参数
+input PaginationInput {
+  # 当前页码
+  current: Int!
+  # 每页数量
+  pageSize: Int!
+}
+
+# 修改结果
+extend type Mutation {
+  # 修改用户账户信息
+  updateAccount(params: UpdateParams!): Account
+} 
+
+# 查询结果
+extend type Query {
+  # 查询用户账户信息列表
+  accounts(params: String): [Account]!
+  # 此处带参数的 UserAccount 查询，可以根据id返回包含了某个用户的具体信息的对象
+  account(id: Int): Account
+}

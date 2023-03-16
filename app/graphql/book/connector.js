@@ -8,6 +8,9 @@ class BookConnector {
   fetchAll() {
     // this.ctx.model.user.find();
     console.log('here');
+    // book 数据源自下面这个 JSON，
+    // 代表此 book 的 graqhql 查询与数据库无关
+    // 也与 sequelize 无关
     const books = [
       {
         title: 'The Awakening',

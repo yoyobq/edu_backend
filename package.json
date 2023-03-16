@@ -13,6 +13,7 @@
     "egg-graphql": "^2.8.0",
     "egg-scripts": "^2.11.0",
     "egg-sequelize": "^6.0.0",
+    "graphql-scalars": "^1.20.4",
     "mysql2": "^2.2.5"
   },
   "devDependencies": {
