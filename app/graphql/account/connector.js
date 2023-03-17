@@ -3,13 +3,20 @@
 class AccountConnector {
   constructor(ctx) {
     this.ctx = ctx;
+    this.service = ctx.service.account;
   }
 
   async fetchById(id) {
     const ctx = this.ctx;
-    const account = await ctx.service.account.find(ctx.helper.parseInt(id));
+    const account = await this.service.find(ctx.helper.parseInt(id));
 
     return account;
+  }
+
+  async checkLogin(params) {
+    const account = await this.service.checkLogin(params);
+    console.log(account);
+    return true;
   }
   // async fetchAll(params) {
   //   const { keyword, pagination } = params || {};

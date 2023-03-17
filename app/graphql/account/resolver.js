@@ -12,6 +12,12 @@ module.exports = {
       const res = ctx.connector.account.fetchById(id);
       return res;
     },
+
+    checkLogin: (_, { params }, ctx) => {
+      console.log(typeof params);
+      const res = ctx.connector.account.checkLogin(params);
+      return res;
+    },
   },
 
   Mutation: {
