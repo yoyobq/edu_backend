@@ -77,5 +77,5 @@ extend type Query {
   # 此处带参数的 UserAccount 查询，可以根据id返回包含了某个用户的具体信息的对象
   account(id: Int): Account
   # 查询是否存在用户名密码对，确认用户登录信息
-  checkLogin(params: LoginParams): Boolean!
+  checkAccount(params: LoginParams): JSON
 }

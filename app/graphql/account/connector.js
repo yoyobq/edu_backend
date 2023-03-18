@@ -1,5 +1,10 @@
 'use strict';
 
+// 23-3-18 Connector 的职责是处理与数据源的交互，它应该负责编写具体的查询逻辑。
+// 因此，如果需要进行个性化的查询，那么将查询条件放在 connector 中是更合适的。
+// 这可以使得查询逻辑更加可控和可维护，同时还可以充分利用 Sequelize 提供的高级查询功能。
+
+
 class AccountConnector {
   constructor(ctx) {
     this.ctx = ctx;
@@ -13,10 +18,25 @@ class AccountConnector {
     return account;
   }
 
-  async checkLogin(params) {
-    const account = await this.service.checkLogin(params);
-    console.log(account);
-    return true;
+  async fetchStatus(params) {
+    // 先析构赋值
+    // 如果 params 的值为假值（如 null、undefined、false 等），
+    // 则使用一个空对象 {} 作为默认值，以避免后续的代码抛出错误。
+    // 此处 type 备用
+    // eslint-disable-next-line no-unused-vars
+    const { loginName, loginPassword, type } = params || {};
+
+    // 在 connector 中处理 req 中的提交的内容，并生成查询条件
+    const condition = {
+      where: {
+        loginName,
+        loginPassword,
+      },
+      attributes: [ 'id', 'status' ],
+    };
+
+    const account = await this.service.findWithCondition(condition);
+    return account;
   }
   // async fetchAll(params) {
   //   const { keyword, pagination } = params || {};

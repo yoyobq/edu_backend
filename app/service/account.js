@@ -2,31 +2,13 @@
 
 const Service = require('egg').Service;
 
+/** 23-3-18 Service 的职责是处理业务逻辑，它应该是抽象的，独立于任何数据源。
+ *  因此，在 GraphQL + Sequelize 的架构中，
+ *  Service 应该将它们的实现与 Sequelize 模型解耦，这样它们就可以处理不同的数据源，
+ * 而不仅仅是 Sequelize 模型。
+**/
+
 class Account extends Service {
-  async checkLogin(params) {
-    // 先析构赋值
-    // 如果 params 的值为假值（如 null、undefined、false 等），
-    // 则使用一个空对象 {} 作为默认值，以避免后续的代码抛出错误。
-    const { loginName, loginPassword, type } = params || {};
-    console.log(loginName, loginPassword, type);
-
-    const account = await this.ctx.model.Account.findOne({
-      where: {
-        loginName,
-        loginPassword,
-      },
-      attributes: [ 'id', 'status' ],
-    });
-
-    if (account) {
-      // 匹配成功
-      console.log(account);
-    } else {
-      // 匹配失败
-      console.log(account);
-    }
-
-  }
   async list({ offset = 0, limit = 10 }) {
     // 21-5-20 此处的 findAndCountAll 是 sequelize 中的查询方法
     const res = await this.ctx.model.Account.findAndCountAll({
@@ -44,6 +26,11 @@ class Account extends Service {
     if (!account) {
       this.ctx.throw(404, 'account not found');
     }
+    return account;
+  }
+
+  async findWithCondition(condition) {
+    const account = await this.ctx.model.Account.findOne(condition);
     return account;
   }
 

@@ -13,9 +13,9 @@ module.exports = {
       return res;
     },
 
-    checkLogin: (_, { params }, ctx) => {
-      console.log(typeof params);
-      const res = ctx.connector.account.checkLogin(params);
+    // 此处函数名应遵照 schema 中的定义
+    checkAccount: (_, { params }, ctx) => {
+      const res = ctx.connector.account.fetchStatus(params);
       return res;
     },
   },
