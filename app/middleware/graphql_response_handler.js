@@ -29,9 +29,8 @@ module.exports = () => {
       if (!referer.endsWith('/graphql')) {
         // 是的话，实在 GrqphiQL 中查询，无需手动处理，
         // 不是则说明：
-        const now = new Date();
         isGqlQuery = true;
-        console.log('[', now, '] 检测到外部发起的 Graphql 查询，需要封装反馈数据');
+        console.log('-------检测到外部发起的 Graphql 查询-------');
       }
 
       await next();
@@ -51,7 +50,7 @@ module.exports = () => {
         const response = JSON.parse(ctx.body);
         // 在控制台输出错误
         if (response.errors) {
-          console.log('-------Graphql Middleware Error Msg-------');
+          console.log('------- Graphql 异常处理信息 -------');
           console.log(response.errors[0]);
         }
         const success = !response.errors;
@@ -67,6 +66,7 @@ module.exports = () => {
           host: ctx.request.header.host,
         };
         // 默认的接口反馈形式是 body { data:{}, errors {} } 感觉这种形式也不错，
+        console.log('------- Graphql 查询处理完成 -------\n');
       }
     }
   };

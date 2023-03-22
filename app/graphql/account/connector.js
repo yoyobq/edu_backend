@@ -19,7 +19,6 @@ class AccountConnector {
   }
 
   async fetchStatus(params) {
-    // 先析构赋值
     // 如果 params 的值为假值（如 null、undefined、false 等），
     // 则使用一个空对象 {} 作为默认值，以避免后续的代码抛出错误。
     // 此处 type 备用
@@ -27,16 +26,39 @@ class AccountConnector {
     const { loginName, loginPassword, type } = params || {};
 
     // 在 connector 中处理 req 中的提交的内容，并生成查询条件
-    const condition = {
+    // 先按 email 查询
+    let condition = {
       where: {
-        loginName,
+        loginEmail: loginName,
         loginPassword,
       },
       attributes: [ 'id', 'status' ],
     };
 
-    const account = await this.service.findWithCondition(condition);
-    return account;
+    let account = await this.service.findWithCondition(condition);
+
+    if (account === null) {
+      // 再按用户名查询
+      condition = {
+        where: {
+          loginName,
+          loginPassword,
+        },
+        attributes: [ 'id', 'status' ],
+      };
+      account = await this.service.findWithCondition(condition);
+    }
+
+    if (account !== null) {
+      switch (account.dataValues.status) {
+        case 1: return account;
+        case 2: throw new Error('此账号封禁中，请联系管理员');
+        case 3: throw new Error('此账户已被删除');
+        default: throw new Error('未知登录错误，请稍后再试');
+      }
+    }
+
+    throw new Error('用户名密码错或账号不存在');
   }
   // async fetchAll(params) {
   //   const { keyword, pagination } = params || {};
