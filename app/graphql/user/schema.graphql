@@ -1,26 +1,59 @@
-# GraphQL 字符串中的注释以 # 号开头
-
-# type User  定义了数据源中用户实体所有可查询字段
 type User {
-  id: ID!
-  name: String
-  age: Int
-  created_at: String
-  updated_at: String
+  id: Int!
+  accountId: Int!
+  name: String!
+  avatar: String
+  email: String!
+  signature: String
+  accessGroup: String
+  address: String
+  phone: String
+  tags: JSON
+  geographic: JSON
+  notifyCount: Int
+  unreadCount: Int
 }
 
 type Users {
-  Users: [User]
+  users: [User!]
 }
 
-# Query 类型它列出了客户端可以执行的所有可用查询，以及每个查询的返回类型。
+input CreateUserInput {
+  accountId: Int!
+  name: String!
+  avatar: String
+  email: String!
+  signature: String
+  accessGroup: String
+  address: String
+  phone: String
+  tags: JSON
+  geographic: JSON
+  notifyCount: Int
+  unreadCount: Int
+}
+
+input UpdateUserInput {
+  name: String
+  avatar: String
+  email: String
+  signature: String
+  accessGroup: String
+  address: String
+  phone: String
+  tags: JSON
+  geographic: JSON
+  notifyCount: Int
+  unreadCount: Int
+}
+
 extend type Query {
-  # 此处 users 查询将返回一个包含了任意 user 的数组
+  user(id: Int!): User
   users: [User]
-  # 此处带参数的 user 查询，可以根据id返回包含了某个用户的具体信息的对象
-  user(id: Int): User
 }
 
 extend type Mutation {
-  addUser(password: String, name: String): User
+  createBaseUserInfo(input: CreateUserInput!): User!
+  updateBaseUserInfo(id: Int!, input: UpdateUserInput!): User!
+  deleteBaseUserInfo(id: Int!): User!
 }

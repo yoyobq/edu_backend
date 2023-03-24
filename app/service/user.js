@@ -8,7 +8,6 @@ class User extends Service {
     const res = await this.ctx.model.User.findAndCountAll({
       offset,
       limit,
-      order: [[ 'created_at', 'desc' ], [ 'id', 'desc' ]],
     });
     // return this.ctx.model.User.findAll();
     return res.rows;
