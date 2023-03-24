@@ -86,7 +86,7 @@ module.exports = appInfo => {
     // myAppName: 'egg',
 
     // 只对 /graphql 前缀的 url 路径生效
-    graphqlErrorHandler: {
+    graphqlResponseHandler: {
       match: '/graphql',
     },
   };

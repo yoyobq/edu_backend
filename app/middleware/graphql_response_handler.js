@@ -24,13 +24,15 @@ module.exports = () => {
       // console.log(ctx.request);
       // console.log(origin);
 
+      // referer 代表发出当前请求的 URL
       const referer = ctx.request.header.referer;
-      // 判断条件将会是一个布尔值，表示 referer 是否以 /graphql 结尾
-      if (!referer.endsWith('/graphql')) {
-        // 是的话，实在 GrqphiQL 中查询，无需手动处理，
-        // 不是则说明：
+
+      // 如果没有 referer，说明是在浏览器访问 GrqphiQL 查询页面
+      // 如果查询页面后缀是 /graphql 说明就是在 GraphiQL 页面中查询，无需手动处理，
+      if (referer !== undefined && !referer.endsWith('/graphql')) {
         isGqlQuery = true;
         console.log('-------检测到外部发起的 Graphql 查询-------');
+        console.log('访问发起自:' + referer);
       }
 
       await next();
