@@ -50,6 +50,7 @@ module.exports = () => {
         // }
 
         const response = JSON.parse(ctx.body);
+        // console.log(response);
         // 在控制台输出错误
         if (response.errors) {
           console.log('------- Graphql 异常处理信息 -------');

@@ -24,9 +24,51 @@ class Account extends Service {
     // findByPk 也是
     const account = await this.ctx.model.Account.findByPk(id);
     if (!account) {
-      this.ctx.throw(404, 'account not found');
+      this.ctx.throw(404, 'id 为 ' + id + '的账号不存在');
     }
     return account;
+  }
+
+  async findLoginAccount(condition) {
+    // 如果 params 的值为假值（如 null、undefined、false 等），
+    // 则使用一个空对象 {} 作为默认值，以避免后续的代码抛出错误。
+    // 此处 type 未使用，但留存备用
+    // eslint-disable-next-line no-unused-vars
+    const { loginName, loginPassword, type } = condition || {};
+    let loginAccount = {};
+    const emailRegex = /^\S+@\S+\.\S+$/;
+
+    // 根据用户提交的是用户名还是 Email 生成不同的查询
+    if (emailRegex.test(loginName)) {
+      loginAccount = {
+        where: {
+          loginEmail: loginName,
+          loginPassword,
+        },
+        attributes: [ 'id', 'status' ],
+      };
+    } else {
+      loginAccount = {
+        where: {
+          loginName,
+          loginPassword,
+        },
+        attributes: [ 'id', 'status' ],
+      };
+    }
+
+    const account = await this.findWithCondition(loginAccount);
+    console.log(account);
+    if (account) {
+      switch (account.dataValues.status) {
+        case 1: return account;
+        case 2: throw new Error('此账号封禁中，请联系管理员');
+        case 3: throw new Error('此账户已被删除');
+        default: throw new Error('未知登录错误，请稍后再试');
+      }
+    }
+
+    throw new Error('用户名密码错或账号不存在');
   }
 
   async findWithCondition(condition) {

@@ -17,13 +17,16 @@ class User extends Service {
     // findByPk 也是
     const user = await this.ctx.model.User.findByPk(id);
     if (!user) {
-      this.ctx.throw(404, 'user not found');
+      this.ctx.throw(404, 'id为 ' + id + ' 的用户信息不存在');
     }
     return user;
   }
 
   async findWithCondition(condition) {
     const user = await this.ctx.model.User.findOne(condition);
+    if (!user) {
+      this.ctx.throw(404, 'account_id 为 ' + condition.where.accountId + ' 的用户信息不存在');
+    }
     return user;
   }
 
