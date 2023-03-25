@@ -20,7 +20,24 @@ class UserConnector {
     const ctx = this.ctx;
     const user = await ctx.service.user.find(ctx.helper.parseInt(id));
 
-    return user;
+    if (user !== null) {
+      return user;
+    }
+
+    throw new Error('id为' + id + '的用户信息不存在');
+  }
+
+  async fetchByAccountId(accountId) {
+    const ctx = this.ctx;
+    const user = await ctx.service.user.findWithCondition({
+      where: { accountId },
+    });
+
+    if (user !== null) {
+      return user;
+    }
+
+    throw new Error('account_id 为' + accountId + '的用户信息不存在');
   }
 }
 

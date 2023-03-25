@@ -7,8 +7,13 @@ module.exports = {
       return ctx.connector.user.fetchAll();
     },
 
-    user: (root, { id }, ctx) => {
-      const res = ctx.connector.user.fetchById(id);
+    user: (root, { id, accountId }, ctx) => {
+      let res = {};
+      if (id) {
+        res = ctx.connector.user.fetchById(id);
+      } else {
+        res = ctx.connector.user.fetchByAccountId(accountId);
+      }
       return res;
     },
   },

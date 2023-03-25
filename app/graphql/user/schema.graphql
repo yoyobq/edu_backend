@@ -48,7 +48,8 @@ input UpdateUserInput {
 }
 
 extend type Query {
-  user(id: Int!): User
+  # 根据 id 或者 accountId 查找 User 信息，id 优先，这两个查询返回的记录都是唯一的
+  user(id: Int, accountId:Int): User
   users: [User]
 }
 

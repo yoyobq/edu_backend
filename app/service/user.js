@@ -22,6 +22,12 @@ class User extends Service {
     return user;
   }
 
+  async findWithCondition(condition) {
+    const user = await this.ctx.model.User.findOne(condition);
+    return user;
+  }
+
+
   async create(user) {
     // create 也是
     return this.ctx.model.User.create(user);
