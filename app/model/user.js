@@ -10,7 +10,7 @@ module.exports = app => {
     avatar: { type: STRING(255), allowNull: true },
     email: { type: STRING(50), allowNull: false },
     signature: { type: STRING(100), allowNull: true },
-    accessGroup: { type: STRING(255), allowNull: true },
+    accessGroup: { type: JSON, allowNull: false },
     address: { type: STRING(255), allowNull: true },
     phone: { type: STRING(20), allowNull: true },
     tags: { type: JSON, allowNull: true },

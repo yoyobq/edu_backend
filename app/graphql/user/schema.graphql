@@ -5,7 +5,7 @@ type User {
   avatar: String
   email: String!
   signature: String
-  accessGroup: String
+  accessGroup: JSON
   address: String
   phone: String
   tags: JSON
@@ -24,7 +24,7 @@ input CreateUserInput {
   avatar: String
   email: String!
   signature: String
-  accessGroup: String
+  accessGroup: JSON
   address: String
   phone: String
   tags: JSON
@@ -38,7 +38,7 @@ input UpdateUserInput {
   avatar: String
   email: String
   signature: String
-  accessGroup: String
+  accessGroup: JSON
   address: String
   phone: String
   tags: JSON
