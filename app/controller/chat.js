@@ -8,32 +8,30 @@ class ChatController extends Controller {
     // const { API_KEY, question, mode } = reqBody;
     const API_KEY = reqBody.API_KEY;
     const chatValue = reqBody.chatValue;
-    // console.log(ctx.request.body);
+
     // console.log(ctx.query);
 
     // API_KEY 来自于前台，此处只负责封装
     // console.log(API_KEY);
 
-    // console.log(chatValue.messages.length);
     if (chatValue.messages.length > 14) {
+      console.log(chatValue.messages.length);
       ctx.body = {
         success: false,
         errorCode: 2001,
         errorMessage: '问答轮次过限，请“清空”对话或“回撤”对话',
         host: ctx.request.header.host,
       };
+      return;
     }
 
     // if (!configuration.apiKey) {
     //   this.ctx.throw(500, "未设置有效的 API_KEY，若需帮助，请联系管理员。");
     // }
-
-    // curl -X POST -H "Content-Type: application/json" -d '{"question":"40岁人生的意义是什么？"}' http://20.243.121.123:8080/
     const url = 'http://20.243.121.123:8080';
 
     // 设置请求参数
     const query = chatValue;
-
     // 设置发往 proxy 的数据
     const data = {
       API_KEY,
