@@ -14,9 +14,14 @@ class ChatController extends Controller {
     // API_KEY 来自于前台，此处只负责封装
     // console.log(API_KEY);
 
-    console.log(chatValue.messages.length);
-    if (chatValue.messages.length === 0) {
-      this.ctx.throw(400, '问题为空');
+    // console.log(chatValue.messages.length);
+    if (chatValue.messages.length > 14) {
+      ctx.body = {
+        success: false,
+        errorCode: 2001,
+        errorMessage: '问答轮次过限，请“清空”对话或“回撤”对话',
+        host: ctx.request.header.host,
+      };
     }
 
     // if (!configuration.apiKey) {
@@ -37,7 +42,7 @@ class ChatController extends Controller {
     };
 
     try {
-      console.log(data);
+      // console.log(data);
       // 发送 POST 请求
       const response = await ctx.curl(url, {
         // 必须指定 method
@@ -51,15 +56,35 @@ class ChatController extends Controller {
         timeout: 60000,
       });
 
-      // console.log(response);
       // 记录回答文本
       const answer = response.data.choices[0];
       // 显示 token 使用情况
       console.log(response.data.usage);
       // 向前端返回回答文本
-      ctx.body = answer.message;
+      ctx.body = {
+        success: true,
+        data: {
+          message: answer.message,
+          usage: response.data.usage,
+        },
+        host: ctx.request.header.host,
+      };
     } catch (error) {
-      console.log(error);
+      // console.log(error);
+      let errorMessage;
+      switch (error.res.statusCode) {
+        case -1: errorMessage = '远程第三方服务器无法连接'; break;
+        case -2: errorMessage = '远程第三方服务器响应超时'; break;
+        case 404: errorMessage = '无效的 url'; break;
+        default: errorMessage = '未定义错误，请联系管理员提交 Bug';
+      }
+
+      ctx.body = {
+        success: false,
+        errorCode: error.res.statusCode,
+        errorMessage,
+        host: ctx.request.header.host,
+      };
     }
   }
 }
@@ -123,33 +148,3 @@ module.exports = ChatController;
 //   }
 // }
 
-//  gpt-3.5 接口分析
-// chatInput = {
-//   model: "gpt-3.5-turbo",
-//   messages: [
-//     // {"role": "system", "content": "You are a helpful assistant."},
-//     {"role": "user", "content": "Who won the world series in 2020?"},
-//     // {"role": "assistant", "content": "The Los Angeles Dodgers won the World Series in 2020."},
-//     // {"role": "user", "content": "Where was it played?"}
-//   ],
-//   temperature: 1, // 默认 1，范围0-2 越高答题思路越宽
-//   top_p: 1, // 默认1，范围 0-2，不要和 temperature 一起修改
-//   n: 1, // number | optional | 1 | 最多返回几份答案
-//   stream: boolean | optional | false | 像官网一样流式传输结果
-//   stop: string or array | optional | null | 终止流式传输的字符
-//   max_tokens: 512, // int | optional | infinite | 最高 2048，太低没用 | 每次最多使用多少 token
-//   presence_penalty: number | optional | 0 | -2 to 2 | 正值允许创新，负值防止跑题
-//   frequency_penalty: number | optional | 0 | -2 to 2 | 正值防止逐字重复同一行
-//   logit_bias: map | optional | null 没看懂
-//   user: string | optional 用户标识符
-// }
-
-// 返回 data 实例
-// {
-//   id: 'chatcmpl-6zJkLKceZjo4rB3x9DWQHYdMye2Lj',
-//   object: 'chat.completion',
-//   created: 1680071933,
-//   model: 'gpt-3.5-turbo-0301',
-//   usage: { prompt_tokens: 21, completion_tokens: 202, total_tokens: 223 },
-//   choices: [ { message:  { role: 'assistant', content: '你好！有什么我可以帮你解决的问题吗？' }, finish_reason: 'stop', index: 0 } ]
-// }

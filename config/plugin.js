@@ -20,4 +20,14 @@ module.exports = {
     enable: true,
     package: 'egg-sequelize',
   },
+
+  passport: {
+    enable: true,
+    package: 'egg-passport',
+  },
+
+  passportLocal: {
+    enable: true,
+    package: 'egg-passport-local',
+  },
 };
