@@ -10,13 +10,9 @@ class ChatController extends Controller {
     const { ctx } = this;
     const reqBody = ctx.request.body;
     // const { API_KEY, question, mode } = reqBody;
-    const API_KEY = reqBody.API_KEY;
+    let API_KEY = reqBody.API_KEY;
     const chatValue = reqBody.chatValue;
-
     // console.log(ctx.query);
-
-    // API_KEY 来自于前台，此处只负责封装
-    // console.log(API_KEY);
 
     if (chatValue.messages.length > 20) {
       console.log(chatValue.messages.length);
@@ -29,9 +25,10 @@ class ChatController extends Controller {
       return;
     }
 
-    // if (!configuration.apiKey) {
-    //   this.ctx.throw(500, "未设置有效的 API_KEY，若需帮助，请联系管理员。");
-    // }
+    if (!API_KEY) {
+      // this.ctx.throw(500, "未设置有效的 API_KEY，若需帮助，请联系管理员。");
+      API_KEY = process.env.OPENAI_API_KEY;
+    }
     const url = 'http://20.243.121.123:8080';
 
     // 设置请求参数
@@ -150,3 +147,13 @@ module.exports = ChatController;
 //   }
 // }
 
+
+// 无 API_KEY
+// {
+//   "error": {
+//       "message": "Incorrect API key provided: null. You can find your API key at https://platform.openai.com/account/api-keys.",
+//       "type": "invalid_request_error",
+//       "param": null,
+//       "code": "invalid_api_key"
+//   }
+// }
