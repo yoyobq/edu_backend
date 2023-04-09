@@ -61,7 +61,9 @@ class Account extends Service {
     console.log(account);
     if (account) {
       switch (account.dataValues.status) {
-        case 1: return account;
+        case 1:
+          this.ctx.service.token.create();
+          return account;
         case 2: throw new Error('此账号封禁中，请联系管理员');
         case 3: throw new Error('此账户已被删除');
         default: throw new Error('未知登录错误，请稍后再试');

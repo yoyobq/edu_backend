@@ -39,6 +39,21 @@ module.exports = appInfo => {
       password: 'alex1mysql',
     },
 
+    // 通过 app.jwt.sign() 方法来签名生成 JWT，app.jwt.verify() 方法来验证 JWT，
+    // 并使用 ctx.request.header.authorization 获取请求头中的 JWT。
+    // 最后，在路由中定义相应的接口地址，用于测试 JWT 的生成和验证功能。
+    // jwt: {
+    //   secret: process.env.APP_JWT_SECRET || 'temp_secret_key',
+    //   // match: ['/graphql', '/chat', '/textGen'],
+    //   expiresIn: '1d',
+    //   // match: '/jwt', // 匹配需要使用 JWT 的路由
+    //   // ignore: '/jwt/ignore', // 忽略使用 JWT 的路由
+    //   // passthrough: '/jwt/passthrough', // 通过但不校验 JWT 的路由
+    //   // decode: { complete: true }, // 解码 JWT 时传递给 jsonwebtoken 的 decode 选项
+    //   // sign: { expiresIn: '1h' }, // 签名 JWT 时传递给 jsonwebtoken 的 sign 选项
+    //   // verify: { ignoreExpiration: true }, // 验证 JWT 时传递给 jsonwebtoken 的 verify 选项
+    // },
+
     graphql: {
       router: '/graphql',
       // 是否加载到 app 上，默认开启
@@ -78,7 +93,7 @@ module.exports = appInfo => {
   config.keys = appInfo.name + '_1620227052763_4470';
 
   // add your middleware config here
-  config.middleware = [ 'graphqlResponseHandler', 'validateHandler', 'graphql' ];
+  config.middleware = [ 'validateHandler', 'graphqlResponseHandler', 'graphql' ];
   // middleware: [ 'errorHandler', 'validateHandler' ],
 
   // add your user config here

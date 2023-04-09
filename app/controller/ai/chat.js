@@ -2,6 +2,10 @@
 const Controller = require('egg').Controller;
 
 class ChatController extends Controller {
+  async sayhi() {
+    this.ctx.body = 'hi';
+  }
+
   async sendQuestionToProxy() {
     const { ctx } = this;
     const reqBody = ctx.request.body;
@@ -14,7 +18,7 @@ class ChatController extends Controller {
     // API_KEY 来自于前台，此处只负责封装
     // console.log(API_KEY);
 
-    if (chatValue.messages.length > 14) {
+    if (chatValue.messages.length > 20) {
       console.log(chatValue.messages.length);
       ctx.body = {
         success: false,
@@ -51,7 +55,7 @@ class ChatController extends Controller {
         // 明确告诉 HttpClient 以 JSON 格式处理返回的响应 body
         dataType: 'json',
         // 防止超时
-        timeout: 60000,
+        timeout: 90000,
       });
 
       // 记录回答文本
@@ -74,7 +78,7 @@ class ChatController extends Controller {
         case -1: errorMessage = '远程第三方服务器无法连接'; break;
         case -2: errorMessage = '远程第三方服务器响应超时'; break;
         case 404: errorMessage = '无效的 url'; break;
-        default: errorMessage = '未定义错误，请联系管理员提交 Bug';
+        default: errorMessage = error.message ? error.message : '未定义错误，请联系管理员提交 Bug';
       }
 
       ctx.body = {

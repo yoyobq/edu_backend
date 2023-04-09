@@ -5,6 +5,25 @@
 
 module.exports = () => {
   return async function validateHandler(ctx, next) {
+    // // 获取客户端请求的 IP 地址
+    // // const remoteAddr = ctx.req.socket.remoteAddress;
+    // const remoteAddr = ctx.headers['x-real-ip'];
+    console.log(ctx.request.header);
+    console.log(ctx.request.ip); // .header);
+    // // 判断是否是 IPv6 地址
+    // const isIpv6 = remoteAddr.includes(':');
+
+    // let ipv4Pat = null;
+    // // 如果是 IPv6 地址，则通过正则表达式提取 IPv4 地址
+    // if (isIpv6) {
+    //   ipv4Pat = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i;
+    // }
+
+    // const ipv4Addr = remoteAddr.match(ipv4Pat) || remoteAddr;
+    // // 设置客户端请求的 IP 地址
+    // ctx.clientIP = ipv4Addr;
+
+    // console.log(ipv4Addr);
     // console.log('--------------validate Start-------------');
 
     // console.log(ctx.request.url);
