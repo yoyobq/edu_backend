@@ -6,14 +6,16 @@ class TextGenController extends Controller {
     const { ctx } = this;
     const reqBody = ctx.request.body;
     // const { API_KEY, question, mode } = reqBody;
-    const API_KEY = reqBody.API_KEY;
+    let API_KEY = reqBody.API_KEY;
     const question = reqBody.inputValue;
     const mode = reqBody.mode;
     // console.log(ctx.request.body);
     // console.log(ctx.query);
 
-    // API_KEY 来自于前台，此处只负责封装
-    // console.log(API_KEY);
+    if (!API_KEY) {
+      // this.ctx.throw(500, "未设置有效的 API_KEY，若需帮助，请联系管理员。");
+      API_KEY = process.env.OPENAI_API_KEY;
+    }
 
     if (question.trim().length === 0) {
       this.ctx.throw(400, '问题为空');

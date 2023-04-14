@@ -21,7 +21,6 @@ module.exports = () => {
       // 数据发送到;
       // console.log(host);
       // 数据来自于;
-      // console.log(ctx.request);
       // console.log(origin);
 
       // referer 代表发出当前请求的 URL

@@ -14,11 +14,45 @@ const Service = require('egg').Service;
 
 
 class Token extends Service {
-  async create() {
-    console.log('here');
-    console.log(this.app.config.jwt.secret);
-    // console.log(process.env.OPENAI_API_KEY);
-    return;
+  async create(account) {
+    // console.log(account);
+    // console.log(this.app.config.jwt.secret);
+    // 根据 account 生成 token
+    // base_user_accounts {
+    //   dataValues: { id: 2, status: 1 },
+    //   _previousDataValues: { id: 2, status: 1 },
+    //   uniqno: 1,
+    //   _changed: Set(0) {},
+    //   _options: {
+    //     isNewRecord: false,
+    //     _schema: null,
+    //     _schemaDelimiter: '',
+    //     raw: true,
+    //     attributes: [ 'id', 'status' ]
+    //   },
+    //   isNewRecord: false
+    // }
+
+    // console.log(account.dataValues);
+
+    const remoteAddr = this.ctx.headers['x-real-ip'] || '192.168.72.256';
+
+    // 利用 egg-jwt 生成 token
+    const token = this.app.jwt.sign({
+      // 载荷信息
+      // {
+      //   id: 2,
+      //   status: 1,
+      //   loginAddr: '192.168.72.256', // dev 下给的错误 IP，方便识别
+      //   iat: 1681094553,
+      //   exp: 1681180953
+      // }
+      ...account.dataValues,
+      loginAddr: remoteAddr,
+    }, this.app.config.jwt.secret, { expiresIn: this.app.config.jwt.expiresIn });
+
+    // console.log(this.app.jwt.decode(token));
+    return token;
   }
 }
 
