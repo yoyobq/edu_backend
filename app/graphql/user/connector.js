@@ -25,6 +25,8 @@ class UserConnector {
 
   async fetchByAccountId(accountId) {
     const ctx = this.ctx;
+    // 实际上，前端传来什么样的 id 都是无所谓的，最终用于查询权限的 id 来自 jwt
+    accountId = ctx.state.user.id;
     const user = await ctx.service.user.findWithCondition({
       where: { accountId },
     });

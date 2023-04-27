@@ -64,6 +64,7 @@ class Account extends Service {
       switch (account.dataValues.status) {
         case 1:
           token = await this.ctx.service.token.create(account);
+          // console.log(token);
           return { account, token };
         case 2: throw new Error('此账号封禁中，请联系管理员');
         case 3: throw new Error('此账户已被删除');

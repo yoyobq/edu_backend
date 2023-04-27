@@ -15,6 +15,7 @@ module.exports = (_, app) => {
     // 分析 url
     const referer = ctx.request.header.referer;
     const parsedUrl = url.parse(referer);
+    const path = parsedUrl.pathname;
 
     // * 因为 /graphql 访问数据后台访问接口的命名都是一样的，具体的查询要求放在了 POST 的数据里
     //   所以，我们不太好区别 /grqphql 的后台到底是处理登录（不需要 token），
@@ -26,7 +27,7 @@ module.exports = (_, app) => {
     if (ctx.url === '/graphql/login') {
       // 当前台提交登录请求时，不检查 header 里的 cookie，
       // 但要检查发起请求的网页是否是 /user/login 否则不予登录
-      const path = parsedUrl.pathname;
+      console.log('不验证 token');
       if (path === '/user/login') {
         ctx.request.url = ('/graphql');
       } else {
@@ -37,6 +38,7 @@ module.exports = (_, app) => {
         return;
       }
     } else {
+      console.log(`来自 ${path} 需要验证 token`);
       try {
         // 当前台提交其他请求时，获取请求 header 中的验证字符串
         // 实例: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Miwic3RhdHVzIjoxLCJsb2dpbkFkZHIiOiIxOTIuMTY4LjcyLjI1NiIsImlhdCI6MTY4MTE0MTUxOCwiZXhwIjoxNjgxMjI3OTE4fQ.AKUzLa1az9vlkH0p3PB8cyHDMS39ZCD9bfX_B5AVtxU"
@@ -94,10 +96,11 @@ module.exports = (_, app) => {
           };
         }
 
+        console.log(`来自 ${path} 的 token 验证通过`);
         // 将解码后的 payload 数据保存到 ctx.state.user 属性中
         ctx.state.user = payload;
       } catch (err) {
-        // console.log(err);
+        console.log(err);
         ctx.body = {
           success: false,
           errorCode: 1001,
