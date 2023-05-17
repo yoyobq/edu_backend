@@ -29,7 +29,7 @@ class ChatController extends Controller {
       // this.ctx.throw(500, "未设置有效的 API_KEY，若需帮助，请联系管理员。");
       API_KEY = process.env.OPENAI_API_KEY;
     }
-    const url = 'http://20.243.121.123:8080';
+    const url = 'http://157.245.34.52:8080';
 
     // 设置请求参数
     const query = chatValue;

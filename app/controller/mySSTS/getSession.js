@@ -73,7 +73,7 @@ class getSessionController extends Controller {
 
     // const res = await ctx.service.mySSTS.myLogin.getWelcomeStr(ctx, headers);
     // const res = await ctx.service.mySSTS.myLogin.queryClassroomIdByStr(ctx, headers);
-    const res = await ctx.service.mySSTS.myLogin.queryNameByJobID(ctx, headers, '2226');
+    const res = await ctx.service.mySSTS.myLogin.queryNameByJobID(ctx, headers, '2230');
     console.log(res);
     const res2 = await ctx.service.mySSTS.myLogin.queryNameByJobID(ctx, headers, '2227');
     console.log(res2);

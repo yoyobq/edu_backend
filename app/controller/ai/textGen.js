@@ -26,7 +26,7 @@ class TextGenController extends Controller {
     // }
 
     // curl -X POST -H "Content-Type: application/json" -d '{"question":"40岁人生的意义是什么？"}' http://20.243.121.123:8080/
-    const url = 'http://20.243.121.123:8080';
+    const url = 'http://157.245.34.52:8080';
 
     // 设置请求参数
     const query = {
