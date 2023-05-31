@@ -17,6 +17,9 @@ module.exports = (_, app) => {
     const parsedUrl = url.parse(referer);
     const path = parsedUrl.pathname;
 
+    // console.log(ctx.url);
+    // console.log(path);
+
     // * 因为 /graphql 访问数据后台访问接口的命名都是一样的，具体的查询要求放在了 POST 的数据里
     //   所以，我们不太好区别 /grqphql 的后台到底是处理登录（不需要 token），
     //   还是处理其他信息（需要验证token），这里就临时采用了一个障眼法。特意让前台的登录访问写成
@@ -31,6 +34,29 @@ module.exports = (_, app) => {
       if (path === '/user/login') {
         ctx.request.url = ('/graphql');
       } else {
+        ctx.body = {
+          success: false,
+          errorMessage: '请勿随意爬取数据',
+        };
+        return;
+      }
+    } else if (ctx.query.noToken === 'true') {
+      // 这个分支是处理 url 中带了查询参数 ?noToken=true 时的处理
+      console.log('查询参数标记 noToken');
+      let isPathValid = false;
+
+      // 只有限定的 path 才能通过 noToken 的形式跳过验证
+      switch (path) {
+        case '/crawl':
+        case '/user/login':
+          isPathValid = true;
+          break;
+        default:
+      }
+
+      console.log(isPathValid);
+
+      if (!isPathValid) {
         ctx.body = {
           success: false,
           errorMessage: '请勿随意爬取数据',

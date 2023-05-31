@@ -64,9 +64,13 @@ class getSessionController extends Controller {
 
     // if (!isLogin) {
     try {
+      /**
+       * 利用固定账号登录校园网，并获取 cookie session 等一些列信息，
+       * 为进一步查找数据做准备
+      */
       headers = await ctx.service.mySSTS.myLogin.login(ctx, '2226', 'alex2ssts');
       headers = await ctx.service.mySSTS.myLogin.getSessionId(ctx, headers);
-      console.log(headers);
+      return headers;
     } catch (error) {
       console.log(error);
     }
@@ -75,17 +79,16 @@ class getSessionController extends Controller {
     // const res = await ctx.service.mySSTS.myLogin.queryClassroomIdByStr(ctx, headers);
     const res = await ctx.service.mySSTS.myLogin.queryNameByJobID(ctx, headers, '2230');
     console.log(res);
-    const res2 = await ctx.service.mySSTS.myLogin.queryNameByJobID(ctx, headers, '2227');
-    console.log(res2);
+    return res;
     // formatAllPlanTable(html);
 
     // const html = await ctx.service.mySSTS.myLogin.queryClassroomIdByStr(ctx, headers);
     // const $ = cheerio.load(html, { decodeEntities: false });
     // console.log(html.toString());
-    ctx.body = {
-      success: true,
-      data: 'hi',
-    };
+    // ctx.body = {
+    //   success: true,
+    //   data: 'hi',
+    // };
   }
 }
 
