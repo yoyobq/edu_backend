@@ -84,8 +84,9 @@ module.exports = (_, app) => {
           };
           return;
         }
-      } else if (path === '/graphql') {
-        // 此分支解决的时从 graphql playground 发来查询请求的鉴权问题
+      } else if (path === '/graphql' && ctx.header.host === '192.168.72.55') {
+        // 此分支解决的是从 graphql playground 发来查询请求的鉴权问题
+        // console.log(ctx.header.host);
         ctx.request.url = ('/graphql');
       } else {
         console.log(`来自 ${path} 需要验证 token`);
