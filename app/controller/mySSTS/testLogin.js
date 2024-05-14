@@ -16,9 +16,17 @@ class getSessionController extends Service {
        * 为进一步查找数据做准备
       */
       // let headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36' };
-      let headers = await ctx.service.mySSTS.myLogin.login(ctx, '2226', 'alex2ssts');
-      headers = await ctx.service.mySSTS.myLogin.getSessionId(ctx, headers);
-      return headers;
+      // let headers = await ctx.service.mySSTS.myLogin.login(ctx, '2226', 'alex2ssts');
+      const headers = await ctx.service.mySSTS.getSession.index();
+      // headers = await ctx.service.mySSTS.myLogin.getSessionId(ctx, headers);
+      this.ctx.body = {
+        success: true,
+        data: {
+          message: '/chat say hi',
+          headers,
+        },
+        host: ctx.request.header.host,
+      };
     } catch (error) {
       console.log(error);
     }

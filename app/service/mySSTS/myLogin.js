@@ -71,7 +71,7 @@ class myLogin extends Service {
           ...headers,
           cookie: newSession + ';' + headers.cookie,
         };
-
+        console.log('Session 获取成功');
         resolve(headers);
       } catch (error) {
         console.log(error);

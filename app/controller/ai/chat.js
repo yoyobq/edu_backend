@@ -3,7 +3,14 @@ const Controller = require('egg').Controller;
 
 class ChatController extends Controller {
   async sayhi() {
-    this.ctx.body = 'hi';
+    const { ctx } = this;
+    this.ctx.body = {
+      success: true,
+      data: {
+        message: '/chat say hi',
+      },
+      host: ctx.request.header.host,
+    };
   }
 
   async sendQuestionToProxy() {

@@ -6,7 +6,7 @@ module.exports = app => {
   // 测试用 router
   // router.resources('user', '/user', controller.deprecated.account);
   router.get('chat', '/chat', controller.ai.chat.sayhi);
-  router.get('getSession', '/getSession', controller.mySSTS.getSession.index);
+  router.get('testLogin', '/testLogin', controller.mySSTS.testLogin.index);
   router.get('crawl', '/crawl', controller.mySSTS.crawl.crawlNameByJobId);
   // router.resources('qubankTableInfo', '/qubankTableInfo', controller.qubankTableInfo);
   // router.resources('account', '/account', controller.account);
