@@ -10,8 +10,10 @@ class CrawlController extends Controller {
   async crawlNameByJobId() {
     const { ctx } = this;
 
-    const headers = ctx.service.mySSTS.getSession.index();
-    console.log(headers);
+    const headers = await ctx.service.mySSTS.getSession.index();
+    const res = await ctx.service.mySSTS.myLogin.queryNameByJobID(ctx, headers, '2230');
+    console.log('res' + res);
+    return res;
   }
 }
 

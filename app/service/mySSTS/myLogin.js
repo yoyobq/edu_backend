@@ -12,69 +12,72 @@ const cheerio = require('cheerio');
 
 class myLogin extends Service {
   // 登录 my.ssts 获取 cookies
-  async login(ctx, user, password) {
-    // 登录接口地址
-    const loginUrl = 'http://my.ssts.cn/userPasswordValidate.portal';
-    let headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36' };
-    // 登录表单数据
-    const loginData = {
-      'Login.Token1': user,
-      'Login.Token2': password,
-      goto: 'http://my.ssts.cn/loginSuccess.portal',
-      gotoOnFail: 'http://my.ssts.cn/loginFailure.porta',
-    };
+  login(ctx, user, password) {
+    return new Promise(async (resolve, reject) => {
+      // 登录接口地址
+      const loginUrl = 'http://my.ssts.cn/userPasswordValidate.portal';
+      let headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36' };
+      // 登录表单数据
+      const loginData = {
+        'Login.Token1': user,
+        'Login.Token2': password,
+        goto: 'http://my.ssts.cn/loginSuccess.portal',
+        gotoOnFail: 'http://my.ssts.cn/loginFailure.porta',
+      };
 
-    try {
-      // 发送登录请求
-      const response = await ctx.curl(loginUrl, {
-        method: 'POST',
-        contentType: 'application/x-www-form-urlencoded',
-        data: loginData,
-        headers,
-      });
+      try {
+        // 发送登录请求
+        const response = await ctx.curl(loginUrl, {
+          method: 'POST',
+          contentType: 'application/x-www-form-urlencoded',
+          data: loginData,
+          headers,
+        });
 
-      // 登录成功
-      if (response.status === 200) {
-        const cookies = response.headers['set-cookie'][0];
-        headers = {
-          ...headers,
-          cookie: cookies.split(';')[0],
-        };
-        console.log(headers);
-        return headers;
+        // 登录成功
+        if (response.status === 200) {
+          const cookies = response.headers['set-cookie'][0];
+          headers = {
+            ...headers,
+            cookie: cookies.split(';')[0],
+          };
+          console.log('登录成功');
+          resolve(headers);
+        }
+      } catch (error) {
+        console.log(error);
+        reject(new Error('获取cookie出错'));
       }
-    } catch (error) {
-      console.log(error);
-      throw new Error('获取cookie出错');
-    }
+    });
   }
 
   // 测试是否登录成功
-  async getSessionId(ctx, headers) {
-    // 首页上获取欢迎字符串
-    // const url = 'http://my.ssts.cn/index.portal';
-    const url = 'http://my.ssts.cn/detachPage.portal?.pn=p52969_p52970';
+  getSessionId(ctx, headers) {
+    return new Promise(async (resolve, reject) => {
+      // const url = 'http://my.ssts.cn/index.portal';
+      const url = 'http://my.ssts.cn/detachPage.portal?.pn=p52969_p52970';
 
-    try {
-      // 发送数据抓取请求
-      const response = await ctx.curl(url, {
-        method: 'GET',
-        headers,
-      });
-      let newSession = response.headers['set-cookie'][0];
-      if (newSession.startsWith('JSESSIONID')) {
-        newSession = newSession.split(';')[0];
+      try {
+        // 发送数据抓取请求
+        const response = await ctx.curl(url, {
+          method: 'GET',
+          headers,
+        });
+        let newSession = response.headers['set-cookie'][0];
+        if (newSession.startsWith('JSESSIONID')) {
+          newSession = newSession.split(';')[0];
+        }
+        headers = {
+          ...headers,
+          cookie: newSession + ';' + headers.cookie,
+        };
+
+        resolve(headers);
+      } catch (error) {
+        console.log(error);
+        reject(new Error('获取session出错'));
       }
-      headers = {
-        ...headers,
-        cookie: newSession + ';' + headers.cookie,
-      };
-
-      return headers;
-    } catch (error) {
-      console.log(error);
-      throw new Error('获取session出错');
-    }
+    });
   }
 
   // 测试是否登录成功
@@ -125,39 +128,41 @@ class myLogin extends Service {
 
   // 根据工号查姓名，此类查询不会刷新 session
   async queryNameByJobID(ctx, headers, jobId) {
-    const url = 'http://my.ssts.cn/pnull.portal?.pen=jxfw.qxjskbcx&.pmn=view&action=optionsRetrieve&className=com.wisedu.app.w3.jxfw.domain.Rkjs&namedQueryId=rkjs.yxQuery&displayFormat=[{jsdm}]{jsmc}&useBaseFilter=true';
-    const queryData = {
-      start: '0',
-      limit: '10',
-      query: jobId,
-      fullEntity: false,
-      selectedItems: '',
-      dwdm: '',
-      jyzdm: '',
-    };
+    return new Promise(async (resolve, reject) => {
+      const url = 'http://my.ssts.cn/pnull.portal?.pen=jxfw.qxjskbcx&.pmn=view&action=optionsRetrieve&className=com.wisedu.app.w3.jxfw.domain.Rkjs&namedQueryId=rkjs.yxQuery&displayFormat=[{jsdm}]{jsmc}&useBaseFilter=true';
+      const queryData = {
+        start: '0',
+        limit: '10',
+        query: jobId,
+        fullEntity: false,
+        selectedItems: '',
+        dwdm: '',
+        jyzdm: '',
+      };
 
-    try {
-      // 发送查询请求
-      const response = await ctx.curl(url, {
-        // response = session.post(login_url, data=login_data, headers=headers)
-        method: 'POST',
-        contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
-        data: queryData,
-        headers,
-      });
+      try {
+        // 发送查询请求
+        const response = await ctx.curl(url, {
+          // response = session.post(login_url, data=login_data, headers=headers)
+          method: 'POST',
+          contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+          data: queryData,
+          headers,
+        });
 
-      // 如果返回成功
-      if (response.status === 200) {
-        // console.log(response.headers);
-        const data = JSON.parse(response.data.toString());
-        const str = data.options[0].value;
-        const name = str.match(/[\u4e00-\u9fa5]+/g)[0];
-        return name;
+        // 如果返回成功
+        if (response.status === 200) {
+          // console.log(response.headers);
+          const data = JSON.parse(response.data.toString());
+          const str = data.options[0].value;
+          const name = str.match(/[\u4e00-\u9fa5]+/g)[0];
+          resolve(name);
+        }
+      } catch (error) {
+        console.log('查询出错', error);
+        reject(new Error('姓名查询出错'));
       }
-    } catch (error) {
-      console.log('查询出错', error);
-      return null;
-    }
+    });
   }
 
   async queryClassroomIdByStr(ctx, headers) {
