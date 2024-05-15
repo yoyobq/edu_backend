@@ -8,6 +8,8 @@ module.exports = app => {
   router.get('chat', '/chat', controller.ai.chat.sayhi);
   router.get('testLogin', '/testLogin', controller.mySSTS.testLogin.index);
   router.get('crawl', '/crawl', controller.mySSTS.crawl.crawlNameByJobId);
+  router.get('pythonHi', '/pythonHi', controller.python.sayHi.index);
+
   // router.resources('qubankTableInfo', '/qubankTableInfo', controller.qubankTableInfo);
   // router.resources('account', '/account', controller.account);
   // router.resources('chat', '/chat', controller.chat);
