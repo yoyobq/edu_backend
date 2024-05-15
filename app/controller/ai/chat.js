@@ -4,6 +4,7 @@ const Controller = require('egg').Controller;
 class ChatController extends Controller {
   async sayhi() {
     const { ctx } = this;
+
     this.ctx.body = {
       success: true,
       data: {

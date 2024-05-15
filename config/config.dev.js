@@ -30,14 +30,14 @@ module.exports = appInfo => {
       allowMethods: 'GET,HEAD,PUT,POST,DELETE,PATCH',
     },
 
-    sequelize: {
-      dialect: 'mysql',
-      host: '127.0.0.1',
-      port: 3306,
-      database: 'edu_platform_test',
-      username: 'alex',
-      password: 'alex1mysql',
-    },
+    // sequelize: {
+    //   dialect: 'mysql',
+    //   host: '127.0.0.1',
+    //   port: 3306,
+    //   database: 'edu_platform_test',
+    //   username: 'admin',
+    //   password: process.env.MYSQL_ADMIN_PASSWORD,
+    // },
 
     graphql: {
       router: '/graphql',
