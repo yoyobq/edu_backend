@@ -92,6 +92,18 @@ class Account extends Service {
   // }
 
   async create(account) {
+    if (!account.loginEmail && !account.loginName) {
+      this.ctx.throw(403, '非法注册，后台已记录。');
+    }
+
+    if (account.loginEmail) {
+      // 如果提供的参数中包含 loginEmail，则检查是否已经存在相同的 loginEmail
+      const existingAccount = await this.ctx.model.Account.findOne({ where: { loginEmail: account.loginEmail } });
+      if (existingAccount) {
+        this.ctx.throw(403, `${account.loginEmail} 该邮箱已存在。`);
+      }
+    }
+
     const newAccount = await this.ctx.model.Account.create(account);
     return newAccount;
   }

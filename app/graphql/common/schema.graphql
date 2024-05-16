@@ -1,0 +1,5 @@
+# 当你使用一些第三方的库来实现自定义类型时，需要在 GraphQL Schema 文件中定义这个类型。
+# 当你在不同数据对象的 schema 文件中申明时，会报错
+# 所以提供一个公共的 common schema 来维护这些第三方自定义类型
+scalar DateTime
+scalar JSON

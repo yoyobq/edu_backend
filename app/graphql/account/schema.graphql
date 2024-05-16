@@ -1,6 +1,6 @@
 # 当你使用一些第三方的库来实现自定义类型时，需要在 GraphQL Schema 文件中定义这个类型。
-scalar DateTime
-scalar JSON
+# scalar DateTime
+# scalar JSON
 
 # 用户账户信息
 type Account {
@@ -58,14 +58,12 @@ input UpdateParams {
 
 # 插入参数
 input InsertParams {
-  # 用户 ID
-  id: ID!
   # 账号名
   loginName: String
   # 账号 Email
   loginEmail: String
   # 密码
-  loginPassword: String
+  loginPassword: String!
 }
 
 # 分页参数
