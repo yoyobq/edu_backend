@@ -1,0 +1,39 @@
+type Staff {
+  id: Int!
+  accountId: Int!
+  jobId: Int!
+  name: String
+  age: Int
+  departmentId: Int
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input StaffCreate {
+  accountId: Int!
+  jobId: Int!
+  name: String
+  age: Int
+  departmentId: Int
+}
+
+input StaffUpdate {
+  accountId: Int
+  jobId: Int
+  name: String
+  age: Int
+  departmentId: Int
+}
+
+
+extend type Query {
+  getStaffById(id: Int!): Staff
+  getStaffByJobId(jobId: Int!): Staff
+  getStaffByAccountId(accountId: Int!): Staff
+}
+
+extend type Mutation {
+  createStaff(input: StaffCreate!): Staff
+  updateStaff(id: Int!, input: StaffUpdate!): Staff
+  deleteStaff(id: Int!): Boolean
+}
