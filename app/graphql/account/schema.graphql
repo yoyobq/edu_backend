@@ -56,6 +56,18 @@ input UpdateParams {
   loginPassword: String
 }
 
+# 插入参数
+input InsertParams {
+  # 用户 ID
+  id: ID!
+  # 账号名
+  loginName: String
+  # 账号 Email
+  loginEmail: String
+  # 密码
+  loginPassword: String
+}
+
 # 分页参数
 input PaginationInput {
   # 当前页码
@@ -68,6 +80,8 @@ input PaginationInput {
 extend type Mutation {
   # 修改用户账户信息
   updateAccount(params: UpdateParams!): Account
+  # 插入新的用户账户信息
+  insertAccount(params: InsertParams!): Account
 } 
 
 # 查询结果

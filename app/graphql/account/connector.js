@@ -4,6 +4,8 @@
 // 因此，如果需要进行个性化的查询，那么将查询条件放在 connector 中是更合适的。
 // 这可以使得查询逻辑更加可控和可维护，同时还可以充分利用 Sequelize 提供的高级查询功能。
 
+// 24-5-15 建议 Connector 中的方法名和 service 中的方法名保持一致
+// Todo: fetchById，fetchStatus 是历史遗留问题，建议抽空修正
 
 class AccountConnector {
   constructor(ctx) {
@@ -22,39 +24,17 @@ class AccountConnector {
     const account = await this.service.findLoginAccount(params);
     return account;
   }
-  // async fetchAll(params) {
-  //   const { keyword, pagination } = params || {};
-  //   const { current = 1, pageSize = 10 } = pagination || {};
 
-  //   const query = {};
-  //   if (keyword) {
-  //     query.$or = [
-  //       { loginName: { $regex: keyword, $options: 'i' } },
-  //       { loginEmail: { $regex: keyword, $options: 'i' } },
-  //     ];
-  //   }
+  async update(params) {
+    const { id, ...updateData } = params;
+    const updatedUserAccount = await this.service.update({ id, updates: updateData });
+    return updatedUserAccount;
+  }
 
-  //   const total = await AccountModel.countDocuments(query);
-  //   const Accounts = await AccountModel.find(query)
-  //     .sort({ createdAt: -1 })
-  //     .skip((current - 1) * pageSize)
-  //     .limit(pageSize)
-  //     .lean();
-
-  //   return {
-  //     list: Accounts,
-  //     pagination: {
-  //       current,
-  //       pageSize,
-  //       total,
-  //     },
-  //   };
-
-  // async update(params) {
-  //   const { id, ...updateData } = params;
-  //   const updatedUserAccount = await UserAccountModel.findByIdAndUpdate(id, updateData, { new: true }).lean();
-  //   return updatedUserAccount;
-  // }
+  async insert(params) {
+    const newAccount = await this.service.create(params);
+    return newAccount;
+  }
 }
 
 module.exports = AccountConnector;

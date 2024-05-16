@@ -24,6 +24,10 @@ module.exports = {
     updateAccount: (_, { params }, ctx) => {
       return ctx.connector.account.update(params);
     },
+
+    insertAccount: (_, { params }, ctx) => {
+      return ctx.connector.account.insert(params);
+    },
   },
 
   DateTime: DateTimeResolver,

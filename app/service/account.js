@@ -6,7 +6,11 @@ const Service = require('egg').Service;
  *  因此，在 GraphQL + Sequelize 的架构中，
  *  Service 应该将它们的实现与 Sequelize 模型解耦，这样它们就可以处理不同的数据源，
  * 而不仅仅是 Sequelize 模型。
-**/
+ **/
+
+/** 24-5-15 再次提醒 Sequelize 提供大量操作 model 的方法，
+ * 如 findAll，findByPk，findOne 等等，请记得查阅官方文档
+ **/
 
 class Account extends Service {
   async list({ offset = 0, limit = 10 }) {
@@ -80,30 +84,52 @@ class Account extends Service {
     return account;
   }
 
+  // 根据 schema 定义 account 和 updates 的结构应为
+  // {
+  //   loginName: 'username',
+  //   loginEmail: 'user@example.com',
+  //   loginPassword: 'password123',
+  // }
+
   async create(account) {
-    // create 也是
-    return this.ctx.model.User.create(account);
+    const newAccount = await this.ctx.model.Account.create(account);
+    return newAccount;
   }
 
   async update({ id, updates }) {
     const account = await this.ctx.model.Account.findByPk(id);
+    console.log(updates);
     if (!account) {
-      this.ctx.throw(404, 'account not found');
+      this.ctx.throw(404, '账号不存在');
     }
 
-    // update 也是
-    return account.update(updates);
+    const updatedAccount = await account.update(updates);
+    return updatedAccount;
   }
+  // async create(account) {
+  //   // create 也是
+  //   return this.ctx.model.User.create(account);
+  // }
 
-  async del(id) {
-    const user = await this.ctx.model.Account.findByPk(id);
-    if (!user) {
-      this.ctx.throw(404, 'Account not found');
-    }
+  // async update({ id, updates }) {
+  //   const account = await this.ctx.model.Account.findByPk(id);
+  //   if (!account) {
+  //     this.ctx.throw(404, 'account not found');
+  //   }
 
-    // destory 也是
-    return user.destroy();
-  }
+  //   // update 也是
+  //   return account.update(updates);
+  // }
+
+  // async del(id) {
+  //   const user = await this.ctx.model.Account.findByPk(id);
+  //   if (!user) {
+  //     this.ctx.throw(404, 'Account not found');
+  //   }
+
+  //   // destory 也是
+  //   return user.destroy();
+  // }
 }
 
 module.exports = Account;
