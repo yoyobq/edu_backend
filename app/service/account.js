@@ -15,7 +15,7 @@ const Service = require('egg').Service;
 class Account extends Service {
   async list({ offset = 0, limit = 10 }) {
     // 21-5-20 此处的 findAndCountAll 是 sequelize 中的查询方法
-    const res = await this.ctx.model.Account.findAndCountAll({
+    const res = await this.ctx.model.Account.findAll({
       offset,
       limit,
       order: [[ 'created_at', 'desc' ], [ 'id', 'desc' ]],
@@ -91,9 +91,13 @@ class Account extends Service {
   //   loginPassword: 'password123',
   // }
 
-  async create(account) {
+  async createOld(account) {
     if (!account.loginEmail && !account.loginName) {
       this.ctx.throw(403, '非法注册，后台已记录。');
+    }
+
+    if (!this.isValidEmail(account.loginEmail)) {
+      this.ctx.throw(403, '非法注册，Email 地址不合法。');
     }
 
     if (account.loginEmail) {
@@ -108,6 +112,73 @@ class Account extends Service {
     return newAccount;
   }
 
+  async create(account) {
+    let transaction;
+    try {
+      transaction = await this.ctx.model.transaction();
+
+      if (account.loginEmail) {
+        // 如果提供的参数中包含 loginEmail，则检查是否已经存在相同的 loginEmail
+        const existingAccount = await this.ctx.model.Account.findOne({ where: { loginEmail: account.loginEmail } }, { transaction });
+        if (existingAccount) {
+          this.ctx.throw(403, `${account.loginEmail} 该邮箱已存在。`);
+        }
+      } else {
+        // 此条是安全防护，若未提供 loginEmail，一定是绕过了正常的注册流程
+        this.ctx.throw(403, '非法注册，后台已记录。');
+      }
+
+      const newAccount = await this.ctx.model.Account.create(account, { transaction });
+
+      // 获取新创建账号的 ID
+      const accountId = newAccount.id;
+      const jobId = account.jobId;
+
+      // 通过 jobId 查询对应的姓名
+      const staffIndex = await this.ctx.service.staffIndex.findByJobId(jobId);
+
+      let name = staffIndex.name;
+      const index = name.indexOf(']');
+      name = name.substring(index + 1).trim();
+
+      // 创建账号基本信息 写入 user_accounts 表
+      const userInfoData = {
+        accountId,
+        name,
+        // TODO: 此处要考虑下默认用户头像的生成
+        // avatar: 'http://example.com/avatar.jpg',
+        email: account.loginEmail,
+        signature: 'Hello, world!',
+        accessGroup: [ 'guest' ],
+      };
+
+      const newUserInfo = await this.ctx.service.userInfo.create({ userInfoData, transaction });
+      // const newUserInfo = await this.ctx.model.UserInfo.create(userInfoData, { transaction });
+      console.log(newUserInfo);
+
+      // 创建员工数据，写入 staff 表
+      const staffData = {
+        accountId,
+        jobId,
+        name,
+        // 其他相关字段的赋值
+      };
+
+      const newStaff = await this.ctx.service.staff.create({ staffData, transaction });
+      // const newStaff = await this.ctx.model.Staff.create(staffData, { transaction });
+      console.log(newStaff);
+
+      // 提交事务
+      await transaction.commit();
+
+      return newAccount;
+    } catch (error) {
+      // 如果发生错误，回滚事务
+      if (transaction) await transaction.rollback();
+      throw error;
+    }
+  }
+
   async update({ id, updates }) {
     const account = await this.ctx.model.Account.findByPk(id);
     console.log(updates);
@@ -118,30 +189,21 @@ class Account extends Service {
     const updatedAccount = await account.update(updates);
     return updatedAccount;
   }
-  // async create(account) {
-  //   // create 也是
-  //   return this.ctx.model.User.create(account);
-  // }
 
-  // async update({ id, updates }) {
-  //   const account = await this.ctx.model.Account.findByPk(id);
-  //   if (!account) {
-  //     this.ctx.throw(404, 'account not found');
-  //   }
+  async del(id) {
+    const user = await this.ctx.model.Account.findByPk(id);
+    if (!user) {
+      this.ctx.throw(404, 'Account not found');
+    }
 
-  //   // update 也是
-  //   return account.update(updates);
-  // }
+    // destory 也是
+    return user.destroy();
+  }
 
-  // async del(id) {
-  //   const user = await this.ctx.model.Account.findByPk(id);
-  //   if (!user) {
-  //     this.ctx.throw(404, 'Account not found');
-  //   }
-
-  //   // destory 也是
-  //   return user.destroy();
-  // }
+  isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
 }
 
 module.exports = Account;

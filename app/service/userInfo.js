@@ -20,31 +20,37 @@ class UserInfoService extends Service {
     return userInfo;
   }
 
-  async create(userInfo) {
+  // 此表不需要来自于外部的 create 操作，
+  // 该方法仅会由 Account 中的 create 关联触发
+  async create({ userInfoData, transaction }) {
     // 根据 accountId 查询是否存在对应的记录
-    const existingAccount = await this.ctx.model.Account.findByPk(userInfo.accountId);
-    if (!existingAccount) {
-      this.ctx.throw(400, `accountId 为 ${userInfo.accountId} 的账号不存在。`);
-    }
+    // 由于是事务操作，这条验证已经没有必要了
+    // const existingAccount = await this.ctx.model.Account.findByPk(userInfo.accountId);
+    // if (!existingAccount) {
+    //   this.ctx.throw(400, `accountId 为 ${userInfo.accountId} 的账号不存在。`);
+    // }
 
-    if (!userInfo.email && !userInfo.name) {
+    if (!userInfoData.email && !userInfoData.name) {
       this.ctx.throw(400, '请提供用户 name 和 email 字段。');
     }
 
-    if (userInfo.email) {
+    if (userInfoData.email) {
       // 检查是否已存在相同的邮箱
-      const existingUserInfo = await this.ctx.model.UserInfo.findOne({ where: { email: userInfo.email } });
+      const existingUserInfo = await this.ctx.model.UserInfo.findOne(
+        { where: { email: userInfoData.email } },
+        { transaction }
+      );
       if (existingUserInfo) {
-        this.ctx.throw(400, `${userInfo.email} 该邮箱已存在。现存用户 accountId 为，${existingUserInfo.accountId}。`);
+        this.ctx.throw(400, `${userInfoData.email} 该邮箱已存在。现存用户 accountId 为，${existingUserInfo.accountId}。`);
       }
     }
 
     // 无论前端如何提供 accessGroup 字段，账号初始都强制为 guest 权限
     // 请注意这里的处理方式，因为 schema 定义该字段 accessGroup: [String]
     // 所以直接提交数组，而不是提交拼接好的字符串。
-    userInfo.accessGroup = [ 'guest' ];
+    userInfoData.accessGroup = [ 'guest' ];
 
-    const newUserInfo = await this.ctx.model.UserInfo.create(userInfo);
+    const newUserInfo = await this.ctx.model.UserInfo.create(userInfoData, { transaction });
     return newUserInfo;
   }
 

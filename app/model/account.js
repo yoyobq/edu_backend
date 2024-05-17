@@ -12,12 +12,12 @@ module.exports = app => {
     },
     loginName: {
       type: STRING(30),
-      allowNull: false,
+      allowNull: true,
       field: 'login_name',
     },
     loginEmail: {
       type: STRING(100),
-      allowNull: true,
+      allowNull: false,
       field: 'login_email',
     },
     loginPassword: {

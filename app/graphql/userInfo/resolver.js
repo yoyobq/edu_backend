@@ -14,9 +14,9 @@ module.exports = {
   },
 
   Mutation: {
-    insertUserInfo: (_, { params }, ctx) => {
-      return ctx.connector.userInfo.insert(params);
-    },
+    // insertUserInfo: (_, { params }, ctx) => {
+    //   return ctx.connector.userInfo.insert(params);
+    // },
 
     updateUserInfo: (_, { params }, ctx) => {
       return ctx.connector.userInfo.update(params);

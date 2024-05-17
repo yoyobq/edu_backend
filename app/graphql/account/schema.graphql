@@ -7,9 +7,9 @@ type Account {
   # 用户 ID
   id: ID!
   # 账号名
-  loginName: String!
+  loginName: String
   # 账号 Email
-  loginEmail: String
+  loginEmail: String!
   # 密码
   loginPassword: String!
   # 最近 5 次登录记录
@@ -64,6 +64,10 @@ input InsertParams {
   loginEmail: String
   # 密码
   loginPassword: String!
+  # 员工工号
+  # 请注意，此处的员工工号并非 account 数据库的字段，
+  # 而是 staff 数据库的字段，需要在 service 里进一步操作
+  jobId: Int!
 }
 
 # 分页参数

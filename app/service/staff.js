@@ -38,16 +38,15 @@ class StaffService extends Service {
     return staff;
   }
 
-  async create(staff) {
+  async create({ staffData, transaction }) {
     // 根据 accountId 查询是否存在对应的记录
-    const existingAccount = await this.ctx.model.Account.findByPk(staff.accountId);
+    const existingAccount = await this.ctx.model.Account.findByPk(staffData.accountId, { transaction });
     if (!existingAccount) {
-      this.ctx.throw(400, `accountId 为 ${staff.accountId} 的账号不存在。`);
+      this.ctx.throw(400, `accountId 为 ${staffData.accountId} 的账号不存在。`);
     }
 
     // 在这里可以添加其他的输入验证逻辑，根据需求进行调整
-
-    const newStaff = await this.ctx.model.Staff.create(staff);
+    const newStaff = await this.ctx.model.Staff.create(staffData, { transaction });
     return newStaff;
   }
 

@@ -18,10 +18,11 @@ class UserInfoConnector {
     return userInfoList;
   }
 
-  async insert(params) {
-    const newUserInfo = await this.service.create(params);
-    return newUserInfo;
-  }
+  // 存在事务操作，不会被主动触发
+  // async insert(params) {
+  //   const newUserInfo = await this.service.create(params);
+  //   return newUserInfo;
+  // }
 
   async update(params) {
     const { id, ...updateData } = params;

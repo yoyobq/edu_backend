@@ -43,7 +43,6 @@ module.exports = app => {
     // Sequ 不直接支持枚举类型，这是替代方案
     gender: {
       type: STRING(10),
-      allowNull: false,
     },
     tags: {
       type: JSON,
