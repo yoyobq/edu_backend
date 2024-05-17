@@ -18,9 +18,9 @@ module.exports = {
   },
 
   Mutation: {
-    createStaff: (_, { input }, ctx) => {
-      return ctx.connector.staff.create(input);
-    },
+    // createStaff: (_, { input }, ctx) => {
+    //   return ctx.connector.staff.create(input);
+    // },
 
     updateStaff: (_, { id, input }, ctx) => {
       return ctx.connector.staff.update(id, input);

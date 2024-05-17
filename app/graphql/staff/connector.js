@@ -23,10 +23,11 @@ class StaffConnector {
     return staff;
   }
 
-  async create(input) {
-    const newStaff = await this.service.create(input);
-    return newStaff;
-  }
+  // 由 Accout 的 create 触发，无需提供对外接口
+  // async create(input) {
+  //   const newStaff = await this.service.create(input);
+  //   return newStaff;
+  // }
 
   async update(id, input) {
     const { ...updateData } = input;
