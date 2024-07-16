@@ -67,7 +67,7 @@ class Account extends Service {
     if (account) {
       switch (account.dataValues.status) {
         case 1:
-          token = await this.ctx.service.token.create(account);
+          token = await this.ctx.service.auth.token.create(account);
           // console.log(token);
           return { account, token };
         case 2: throw new Error('此账号封禁中，请联系管理员');
@@ -135,7 +135,7 @@ class Account extends Service {
       const jobId = account.jobId;
 
       // 通过 jobId 查询对应的姓名
-      const staffIndex = await this.ctx.service.staffIndex.findByJobId(jobId);
+      const staffIndex = await this.ctx.service.user.staffIndex.findByJobId(jobId);
 
       let name = staffIndex.name;
       const index = name.indexOf(']');
@@ -152,7 +152,7 @@ class Account extends Service {
         accessGroup: [ 'guest' ],
       };
 
-      const newUserInfo = await this.ctx.service.userInfo.create({ userInfoData, transaction });
+      const newUserInfo = await this.ctx.service.user.userInfo.create({ userInfoData, transaction });
       // const newUserInfo = await this.ctx.model.UserInfo.create(userInfoData, { transaction });
       console.log(newUserInfo);
 
@@ -164,7 +164,7 @@ class Account extends Service {
         // 其他相关字段的赋值
       };
 
-      const newStaff = await this.ctx.service.staff.create({ staffData, transaction });
+      const newStaff = await this.ctx.service.user.staff.create({ staffData, transaction });
       // const newStaff = await this.ctx.model.Staff.create(staffData, { transaction });
       console.log(newStaff);
 

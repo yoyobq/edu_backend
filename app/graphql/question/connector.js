@@ -17,7 +17,7 @@ class QuestionConnector {
       // 规定题型 'sin' 'mul' 'jug'
       type,
     };
-    const questions = await ctx.service.question.list(query);
+    const questions = await ctx.service.practice.question.list(query);
     return questions;
   }
 
@@ -31,7 +31,7 @@ class QuestionConnector {
       tableName,
     };
 
-    const question = await ctx.service.question.find(query);
+    const question = await ctx.service.practice.question.find(query);
 
     return question;
   }

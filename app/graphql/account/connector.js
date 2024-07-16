@@ -10,7 +10,7 @@
 class AccountConnector {
   constructor(ctx) {
     this.ctx = ctx;
-    this.service = ctx.service.account;
+    this.service = ctx.service.user.account;
   }
 
   async fetchById(id) {

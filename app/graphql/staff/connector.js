@@ -3,7 +3,7 @@
 class StaffConnector {
   constructor(ctx) {
     this.ctx = ctx;
-    this.service = ctx.service.staff;
+    this.service = ctx.service.user.staff;
   }
 
   async fetchById(id) {

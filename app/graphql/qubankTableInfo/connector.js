@@ -11,7 +11,7 @@ class QubankTableInfoConnector {
       // limit: ctx.helper.parseInt(ctx.query.limit),
       // offset: ctx.helper.parseInt(ctx.query.offset),
     };
-    const qubankTableInfos = await ctx.service.qubankTableInfo.list(query);
+    const qubankTableInfos = await ctx.service.practice.qubankTableInfo.list(query);
     // 此处返回的数据类型应该与schema中的定义一致
     qubankTableInfos.forEach(element => {
       element.dataValues.testItemStr = element.dataValues.testItemStr.split(',');
@@ -22,7 +22,7 @@ class QubankTableInfoConnector {
 
   async fetchById(id) {
     const ctx = this.ctx;
-    const qubankTableInfo = await ctx.service.qubankTableInfo.find(ctx.helper.parseInt(id));
+    const qubankTableInfo = await ctx.service.practice.qubankTableInfo.find(ctx.helper.parseInt(id));
 
     return qubankTableInfo;
   }

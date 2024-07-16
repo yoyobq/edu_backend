@@ -3,7 +3,7 @@
 class UserInfoConnector {
   constructor(ctx) {
     this.ctx = ctx;
-    this.service = ctx.service.userInfo;
+    this.service = ctx.service.user.userInfo;
   }
 
   async fetchById(id) {

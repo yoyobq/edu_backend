@@ -11,17 +11,17 @@ class AccountController extends Controller {
       offset: ctx.helper.parseInt(ctx.query.offset),
     };
     // console.log(query);
-    ctx.body = await ctx.service.account.list(query);
+    ctx.body = await ctx.user.service.account.list(query);
   }
 
   async show() {
     const ctx = this.ctx;
-    ctx.body = await ctx.service.account.find(ctx.helper.parseInt(ctx.params.id));
+    ctx.body = await ctx.service.user.account.find(ctx.helper.parseInt(ctx.params.id));
   }
 
   async create() {
     const ctx = this.ctx;
-    const account = await ctx.service.account.create(ctx.request.body);
+    const account = await ctx.service.user.account.create(ctx.request.body);
     ctx.status = 201;
     ctx.body = account;
   }
@@ -30,13 +30,13 @@ class AccountController extends Controller {
     const ctx = this.ctx;
     const id = ctx.helper.parseInt(ctx.params.id);
     const body = ctx.request.body;
-    ctx.body = await ctx.service.account.update({ id, updates: body });
+    ctx.body = await ctx.service.user.account.update({ id, updates: body });
   }
 
   async destroy() {
     const ctx = this.ctx;
     const id = ctx.helper.parseInt(ctx.params.id);
-    await ctx.service.account.del(id);
+    await ctx.service.user.account.del(id);
     ctx.status = 200;
   }
 }
