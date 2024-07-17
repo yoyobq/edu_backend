@@ -11,14 +11,14 @@ class UserConnector {
       // limit: ctx.helper.parseInt(ctx.query.limit),
       // offset: ctx.helper.parseInt(ctx.query.offset),
     };
-    const users = await ctx.service.user.list(query);
+    const users = await ctx.service.user.user.list(query);
     // 此处返回的数据类型应该与schema中的定义一致
     return users;
   }
 
   async fetchById(id) {
     const ctx = this.ctx;
-    const user = await ctx.service.user.find(ctx.helper.parseInt(id));
+    const user = await ctx.service.user.user.find(ctx.helper.parseInt(id));
 
     return user;
   }
@@ -27,7 +27,7 @@ class UserConnector {
     const ctx = this.ctx;
     // 实际上，前端传来什么样的 id 都是无所谓的，最终用于查询权限的 id 来自 jwt
     accountId = ctx.state.user.id;
-    const user = await ctx.service.user.findWithCondition({
+    const user = await ctx.service.user.user.findWithCondition({
       where: { accountId },
     });
 
