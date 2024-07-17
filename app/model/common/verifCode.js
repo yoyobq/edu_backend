@@ -53,6 +53,7 @@ module.exports = app => {
     timestamps: true,
     createdAt: 'created_at', // 自动管理的创建时间字段
     updatedAt: false, // 禁用自动管理的更新时间字段
+    freezeTableName: true,
   });
 
   return VerifCode;
