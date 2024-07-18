@@ -1,5 +1,5 @@
 /* eslint valid-jsdoc: "off" */
-
+const path = require('path');
 'use strict';
 
 /**
@@ -37,6 +37,24 @@ module.exports = appInfo => {
       database: 'edu_platform',
       username: 'admin',
       password: process.env.MYSQL_ADMIN_PASSWORD,
+      define: {
+        freezeTableName: true,
+        underscored: true,
+      },
+    },
+
+    logger: {
+      dir: path.join(__dirname, '../logs'), // 使用相对路径
+      level: 'INFO',
+      consoleLevel: 'INFO',
+      appLogName: 'app.log',
+      coreLogName: 'egg-web.log',
+      agentLogName: 'egg-agent.log',
+      errorLogName: 'common-error.log',
+      // 添加日志旋转配置
+      rotateLogDirs: [ path.join(__dirname, '../logs') ],
+      maxDays: 5, // 日志文件保留时间，单位：天
+      maxFiles: 10, // 最多保留的日志文件数量
     },
 
     graphql: {
