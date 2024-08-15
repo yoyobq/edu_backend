@@ -15,12 +15,12 @@ class AccountConnector {
 
   async fetchById(id) {
     const ctx = this.ctx;
-    const account = await this.service.find(ctx.helper.parseInt(id));
+    const account = await this.service.fetchById(ctx.helper.parseInt(id));
 
     return account;
   }
 
-  async fetchStatus(params) {
+  async findLoginAccount(params) {
     const account = await this.service.findLoginAccount(params);
     return account;
   }

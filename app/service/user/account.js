@@ -24,7 +24,7 @@ class Account extends Service {
     return res.rows;
   }
 
-  async find(id) {
+  async fetchById(id) {
     // findByPk 也是
     const account = await this.ctx.model.Account.findByPk(id);
     if (!account) {
@@ -66,13 +66,21 @@ class Account extends Service {
     // console.log(account);
     if (account) {
       switch (account.dataValues.status) {
-        case 1:
+        case 'ACTIVE':
           token = await this.ctx.service.auth.token.create(account);
-          // console.log(token);
           return { account, token };
-        case 2: throw new Error('此账号封禁中，请联系管理员');
-        case 3: throw new Error('此账户已被删除');
-        default: throw new Error('未知登录错误，请稍后再试');
+        case 'BANNED':
+          throw new Error('此账号封禁中，请联系管理员');
+        case 'DELETED':
+          throw new Error('此账户已被删除');
+        case 'PENDING':
+          throw new Error('此账户尚未激活，请检查您的邮箱以激活账号');
+        case 'SUSPENDED':
+          throw new Error('此账户已被暂停，请联系管理员');
+        case 'INACTIVE':
+          throw new Error('此账户不活跃，请联系管理员');
+        default:
+          throw new Error('未知登录错误，请稍后再试');
       }
     }
 

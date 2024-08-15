@@ -1,6 +1,18 @@
-# 当你使用一些第三方的库来实现自定义类型时，需要在 GraphQL Schema 文件中定义这个类型。
-# scalar DateTime
-# scalar JSON
+"""
+@file schema.graphql
+@description 定义GraphQL模式，描述用户账户相关的类型、输入参数、查询和变更。
+
+主要功能:
+- 定义Account类型，描述用户账户信息。
+- 定义LoginHistory类型，描述登录记录。
+- 定义QueryParams、LoginParams、UpdateParams和InsertParams输入类型，用于查询和变更操作。
+- 扩展Query和Mutation类型，添加与用户账户相关的查询和变更操作。
+
+补充说明:
+- 当你使用一些第三方的库来实现自定义类型时，需要在 GraphQL Schema 文件中定义这个类型。
+- 例如本文档里的 DateTime 和 JSON
+-- 请检查公共文件 app/graphql/common/sehema.graphql 检查类型的定义
+"""
 
 # 用户账户信息
 type Account {
@@ -10,16 +22,30 @@ type Account {
   loginName: String
   # 账号 Email
   loginEmail: String!
-  # 密码
-  loginPassword: String!
   # 最近 5 次登录记录
   recentLoginHistory: [LoginHistory]
   # 创建时间
   createdAt: DateTime!
   # 更新时间
   updatedAt: DateTime!
-  # 用户状态 "ACTIVE=1"、"BANNED=2"、"DELETED=3"
-  status: Int
+  # 用户状态 "ACTIVE"、"BANNED"、"DELETED"、"PENDING"、"SUSPENDED"、"INACTIVE"
+  status: AccountStatus
+}
+
+# 用户状态枚举类型
+enum AccountStatus {
+  # 活跃状态
+  ACTIVE
+  # 被封禁状态
+  BANNED
+  # 被删除状态
+  DELETED
+  # 待激活状态
+  PENDING
+  # 已暂停状态
+  SUSPENDED
+  # 不活跃状态
+  INACTIVE
 }
 
 # 登录记录
