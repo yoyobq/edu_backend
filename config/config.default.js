@@ -51,10 +51,15 @@ module.exports = appInfo => {
       coreLogName: 'egg-web.log',
       agentLogName: 'egg-agent.log',
       errorLogName: 'common-error.log',
-      // 添加日志旋转配置
-      rotateLogDirs: [ path.join(__dirname, '../logs') ],
-      maxDays: 5, // 日志文件保留时间，单位：天
-      maxFiles: 10, // 最多保留的日志文件数量
+      // 添加日志旋转配置，新版不需要配置这个了，新版配置日志轮转见下方 logrotator 部分
+      // rotateLogDirs: [ path.join(__dirname, '../logs') ],
+      // maxDays: 5, // 日志文件保留时间，单位：天
+      // maxFiles: 10, // 最多保留的日志文件数量
+    },
+
+    logrotator: {
+      maxDays: 10, // 日志保留的最大天数，超过的文件将被删除
+      maxFiles: 10, // 最多保留的日志文件数，超过的文件将被删除
     },
 
     graphql: {
