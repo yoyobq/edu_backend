@@ -1,0 +1,16 @@
+type MemberStaff {
+  jobId: Int!
+  name: String
+}
+
+extend type Query {
+  getNameByJobId(jobId: Int!): String
+  getJobIdByName(name: String!): Int
+  existsMemberStaff(jobId: Int!, name: String!): Boolean
+}
+
+extend type Mutation {
+  createMemberStaff(jobId: Int!, name: String): MemberStaff
+  updateMemberStaff(jobId: Int!, name: String): MemberStaff
+  deleteMemberStaff(jobId: Int!): Boolean
+}

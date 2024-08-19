@@ -9,6 +9,7 @@ module.exports = app => {
       type: INTEGER,
       primaryKey: true,
       allowNull: false,
+      field: 'job_id',
     },
     name: {
       type: STRING(50),
@@ -21,3 +22,4 @@ module.exports = app => {
 
   return StaffIndex;
 };
+

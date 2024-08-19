@@ -123,7 +123,12 @@ module.exports = appInfo => {
   config.keys = appInfo.name + '_1620227052763_4470';
 
   // add your middleware config here
-  config.middleware = [ 'validateHandler', 'graphqlResponseHandler', 'errorHandler', 'graphql' ];
+  config.middleware = [
+    'validateHandler',
+    'graphqlResponseHandler',
+    // 'errorHandler',
+    'graphql',
+  ];
   // middleware: [ 'errorHandler', 'validateHandler' ],
 
   // add your user config here
