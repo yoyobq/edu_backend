@@ -1,4 +1,4 @@
-type MemberStaff {
+type StaffIndex {
   jobId: Int!
   name: String
 }
@@ -6,11 +6,11 @@ type MemberStaff {
 extend type Query {
   getNameByJobId(jobId: Int!): String
   getJobIdByName(name: String!): Int
-  existsMemberStaff(jobId: Int!, name: String!): Boolean
+  existsStaffIndex(jobId: Int!, name: String!): Boolean
 }
 
 extend type Mutation {
-  createMemberStaff(jobId: Int!, name: String): MemberStaff
-  updateMemberStaff(jobId: Int!, name: String): MemberStaff
-  deleteMemberStaff(jobId: Int!): Boolean
+  createStaffIndex(jobId: Int!, name: String): StaffIndex
+  updateStaffIndex(jobId: Int!, name: String): StaffIndex
+  deleteStaffIndex(jobId: Int!): Boolean
 }

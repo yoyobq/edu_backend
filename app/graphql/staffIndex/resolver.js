@@ -3,29 +3,29 @@
 module.exports = {
   Query: {
     async getNameByJobId(_, { jobId }, { connector }) {
-      const result = await connector.memberStaff.getByJobId(jobId);
+      const result = await connector.staffIndex.getByJobId(jobId);
       return result ? result.name : null;
     },
     async getJobIdByName(_, { name }, { connector }) {
-      const result = await connector.memberStaff.getByName(name);
+      const result = await connector.staffIndex.getByName(name);
       return result ? result.job_Id : null;
     },
-    async existsMemberStaff(_, { jobId, name }, { connector }) {
-      const exists = await connector.memberStaff.exists({ jobId, name });
+    async existsStaffIndex(_, { jobId, name }, { connector }) {
+      const exists = await connector.staffIndex.exists({ jobId, name });
       return exists;
     },
   },
   Mutation: {
-    async createMemberStaff(_, { jobId, name }, { connector }) {
-      const result = await connector.memberStaff.create({ jobId, name });
+    async createStaffIndex(_, { jobId, name }, { connector }) {
+      const result = await connector.staffIndex.create({ jobId, name });
       return result;
     },
-    async updateMemberStaff(_, { jobId, name }, { connector }) {
-      const result = await connector.memberStaff.update({ jobId, name });
+    async updateStaffIndex(_, { jobId, name }, { connector }) {
+      const result = await connector.staffIndex.update({ jobId, name });
       return result;
     },
-    async deleteMemberStaff(_, { jobId }, { connector }) {
-      const result = await connector.memberStaff.delete(jobId);
+    async deleteStaffIndex(_, { jobId }, { connector }) {
+      const result = await connector.staffIndex.delete(jobId);
       return !!result;
     },
   },

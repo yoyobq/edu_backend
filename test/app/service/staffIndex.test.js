@@ -89,7 +89,7 @@ describe('service/user/staffIndex.js', () => {
     });
 
     it('应该返回 false 如果不存在指定 jobId 和 name 的员工', async () => {
-      const exists = await ctx.service.user.staffIndex.exists(4, 'Nonexistent Name');
+      const exists = await ctx.service.user.staffIndex.exists(4, 'NonExistent Name');
       assert(exists === false);
     });
   });
