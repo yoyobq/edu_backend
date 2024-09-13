@@ -52,6 +52,11 @@ module.exports = {
       return res;
     },
 
+    accountByLoginEmail: (_, { loginEmail }, ctx) => {
+      const res = ctx.connector.account.fetchByLoginEmail(loginEmail);
+      return res;
+    },
+
     // 此处函数名应遵照 schema 中的定义
     checkAccount: (_, { params }, ctx) => {
       const res = ctx.connector.account.findLoginAccount(params);

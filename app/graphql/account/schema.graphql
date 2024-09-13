@@ -118,6 +118,8 @@ extend type Query {
   accounts(params: String): [Account]!
   # 此处带参数的 UserAccount 查询，可以根据id返回包含了某个用户的具体信息的对象
   account(id: Int): Account
+  # 可以根据id返回包含了某个用户的具体信息的对象
+  accountByLoginEmail(loginEmail: String): Account
   # 查询是否存在用户名密码对，确认用户登录信息
   checkAccount(params: LoginParams): JSON
 }

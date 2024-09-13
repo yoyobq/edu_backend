@@ -33,7 +33,12 @@ class StaffService extends Service {
   async findByJobId(jobId) {
     const staff = await this.ctx.model.Staff.findOne({ where: { jobId } });
     if (!staff) {
-      this.ctx.throw(404, '工号为 ' + jobId + ' 的员工信息不存在');
+      return null;
+      // this.ctx.throw(404, '工号为 ' + jobId + ' 的员工信息不存在');
+      // 前端会主动处理后台抛出的异常，
+      // 如果我这里抛出异常，前端调用他的函数就接收到具体异常反馈前就会被自动程序拦截
+      // 然而，用户不存在是个“有效信息”，后续还有操作，不能因为抛出异常而终止
+      // 所以做这个临时处理。
     }
     return staff;
   }

@@ -24,7 +24,7 @@ class Account extends Service {
     return res.rows;
   }
 
-  async fetchById(id) {
+  async findById(id) {
     // findByPk 也是
     const account = await this.ctx.model.Account.findByPk(id);
     if (!account) {
@@ -92,6 +92,15 @@ class Account extends Service {
     return account;
   }
 
+  async findByLoginEmail(loginEmail) {
+    const account = await this.ctx.model.Account.findOne({
+      where: {
+        loginEmail,
+      },
+      // attributes: [ 'id', 'status' ],
+    });
+    return account;
+  }
   // 根据 schema 定义 account 和 updates 的结构应为
   // {
   //   loginName: 'username',
