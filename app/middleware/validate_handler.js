@@ -48,10 +48,10 @@ module.exports = (_, app) => {
 
       // * 前台想用爬虫模拟登录的时候，障眼法也有一定的功效，爬虫会以为访问的链接是 /graphql/login，
       //   其实访问的还是 /graphql，但此处阻止爬虫的代码还未开发，仅注释保留这个想法
-      if (ctx.url === '/graphql/login') {
+      if (ctx.url === '/graphql/login' || ctx.url === '/graphql/register') {
         // 当前台提交登录请求时，不检查 header 里的 cookie，
         // 但要检查发起请求的网页是否是 /user/login 否则不予登录
-        console.log('不验证 token');
+        console.log('登录或注册时不验证 token');
         if (path === '/user/login') {
           ctx.request.url = ('/graphql');
         } else {

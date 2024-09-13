@@ -69,6 +69,8 @@ module.exports = () => {
           host: ctx.request.header.host,
         };
         // 默认的接口反馈形式是 body { data:{}, errors {} } 感觉这种形式也不错，
+
+        // console.log(ctx.body);
         console.log('------- Graphql 查询处理完成 -------\n');
       }
     }
