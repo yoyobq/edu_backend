@@ -33,33 +33,44 @@ const Service = require('egg').Service;
 
 class VerifCode extends Service {
   /**
-   * 生成验证代码。
+   * 生成验证字符串并生成数据库记录
    * @param {number} applicantId - 申请者ID。
    * @param {number} issuerId - 发行者ID（响应申请的管理员）。
    * @param {number} expiryTime - 验证代码的有效期（毫秒）。
-   * @return {number} - 生成的验证代码记录的ID。
+   * @return {number} - 生成的验证字符串在数据表中的ID。
    */
-  async generateVerificationCode(applicantId, issuerId, expiryTime) {
+  async generateVerificationRecord(applicantId, issuerId, expiryTime) {
     // 生成盐
     const salt = crypto.randomBytes(8).toString('hex');
 
-    // 生成验证字符串
-    const data = JSON.stringify({ applicantId, issuerId, timestamp: Date.now(), expiryTime });
-    const token = crypto.createHmac('sha256', salt).update(data).digest('hex');
-
     // 计算过期时间
-    const expiry = new Date(Date.now() + expiryTime);
+    const expiry = Date.now() + expiryTime;
+
+    const token = this.generateVerifCode(applicantId, issuerId, expiry, salt);
 
     // 存储到数据库
     const verifRecord = await this.ctx.model.Common.VerifCode.create({
-      applicant_id: applicantId,
-      issuer_id: issuerId,
+      applicantId,
+      issuerId,
       expiry,
       token,
       salt,
     });
 
     return verifRecord.id;
+  }
+
+  /**
+ * 生成验证字符串
+ * @param {number} applicantId - 申请者的唯一标识 ID。
+ * @param {number} issuerId - 发行者（通常是管理员）的唯一标识 ID。
+ * @param {number} expiry - 验证代码的到期时间，作为 Unix 时间戳（以毫秒为单位）。
+ * @param {string} salt - 8 位 16 进制字符串作随机盐。
+ * @return {string} - 生成的 64 个字符长度的 16 进制哈希验证字符串。
+ */
+  generateVerifCode(applicantId, issuerId, expiry, salt) {
+    const data = JSON.stringify({ applicantId, issuerId, expiry });
+    return crypto.createHmac('sha256', salt).update(data).digest('hex');
   }
 
   /**

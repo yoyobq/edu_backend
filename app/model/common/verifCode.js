@@ -18,7 +18,7 @@
  */
 
 module.exports = app => {
-  const { STRING, INTEGER, DATE } = app.Sequelize;
+  const { STRING, INTEGER, ENUM, JSON, BIGINT } = app.Sequelize;
 
   const tbn = 'common_verif_code';
 
@@ -28,17 +28,30 @@ module.exports = app => {
       primaryKey: true,
       autoIncrement: true,
     },
-    applicant_id: {
+    applicantId: {
       type: INTEGER,
       allowNull: false,
       defaultValue: 0,
+      field: 'applicant_id',
     }, // 申请者ID，默认值为0
-    issuer_id: {
+    applicantType: {
+      type: ENUM('register', 'other'),
+      allowNull: false,
+      defaultValue: 'other',
+      field: 'applicant_type',
+    }, // 申请类型，默认是 other
+    issuerId: {
       type: INTEGER,
       allowNull: false,
+      field: 'issuer_id',
     }, // 发行者ID（响应申请的管理员）
+    data: {
+      type: JSON,
+      allowNull: true,
+      field: 'data',
+    }, // 附加数据，可以为空
     expiry: {
-      type: DATE,
+      type: BIGINT,
       allowNull: false,
     },
     token: {
