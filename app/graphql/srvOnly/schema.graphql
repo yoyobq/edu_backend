@@ -1,0 +1,50 @@
+"""
+此 schema 定义了仅限服务相关的 GraphQL 操作，专门用于不涉及直接数据库交互的功能。
+这些操作可以包括发送验证码邮件、短信或其他服务相关任务。
+
+每个服务相关的操作都在 `Mutation` 类型下定义。为了将来的扩展，可以添加更多的字段来处理其他服务类任务。
+"""
+
+# 定义 applicantType 的枚举类型
+enum ApplicantType {
+  registration    # 注册
+  pwdreset        # 密码重置
+  other           # 其他类型
+}
+
+
+# VerifCode 发送参数
+input VerifEmailInput {
+  # 验证码类型 
+  applicantType: ApplicantType!
+  # 自定义数据，JSON 格式
+  data: JSON
+  # 接收验证码的邮箱地址
+  email: String!
+  # 申请者ID
+  applicantId: Int!
+  # 发行者ID（响应申请的管理员）
+  issuerId: Int!
+  # 验证码的有效期（毫秒）
+  expiryTime: Int!
+}
+
+
+
+# 定义仅限服务的操作的 Mutation 类型
+extend type Mutation {
+
+  """
+  生成验证码并发送到指定的邮箱地址。
+  根据 applicantType 决定邮件内容
+  注册邮件会携带一条 64 位的 16进制 verifCode
+  于此同时，数据库也会记录这条注册请求
+
+  @param {VerificationEmailInput} params - 包含验证码发送的所有必要信息。
+  @return {Boolean} - 布尔值，表示邮件是否成功发送。
+  """
+  sendVerifEmail(params: VerifEmailInput!): Boolean
+
+}
+
+# 将来可以在此处添加其他仅限服务的操作

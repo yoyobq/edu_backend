@@ -28,12 +28,14 @@ const Service = require('egg').Service;
 class VerifCode extends Service {
   /**
    * 生成验证字符串并生成数据库记录，根据字符串和返回的记录 id，生成最终的 VerifCode
+   * @param {string} applicantType - 申请类型（注册，密码重置）
+   * @param {object} data - 申请时携带的自定义数据（JSON 对象）
    * @param {number} applicantId - 申请者ID。
    * @param {number} issuerId - 发行者ID（响应申请的管理员）。
    * @param {number} expiryTime - 验证代码的有效期（毫秒）。
    * @return {number} - 生成的验证字符串在数据表中的ID。
    */
-  async generateVerifCode(applicantId, issuerId, expiryTime) {
+  async generateVerifCode(applicantType, data, applicantId, issuerId, expiryTime) {
     // 生成盐
     const salt = crypto.randomBytes(8).toString('hex');
 
@@ -41,10 +43,10 @@ class VerifCode extends Service {
     const expiry = Date.now() + expiryTime;
 
     // 生成 hash 字符串
-    const hashStr = this.generateHashStr(applicantId, issuerId, expiry, salt);
+    const hashStr = this.generateHashStr(applicantType, applicantId, issuerId, expiry, salt);
 
     // 存储到数据库
-    const id = await this.storeVeriCode(applicantId, issuerId, expiry, salt, hashStr);
+    const id = await this.storeVeriCode(applicantType, data, applicantId, issuerId, expiry, salt, hashStr);
 
     // 加密混淆 ID
     const encryptedId = this.encryptId(id);
@@ -53,13 +55,15 @@ class VerifCode extends Service {
   }
 
 
-  async storeVeriCode(applicantId, issuerId, expiry, salt, token) {
+  async storeVeriCode(applicantType, data, applicantId, issuerId, expiry, salt, token) {
     // 存储到数据库
     const verifRecord = await this.ctx.model.Common.VerifCode.create({
+      applicantType,
+      data,
       applicantId,
       issuerId,
       expiry,
-      token, // token 其实已经不需要，但仍然保留，方便调试
+      token, // token 其实已经不需要，靠实时计算更可靠，但仍然保留，方便调试
       salt,
     });
 
@@ -69,14 +73,15 @@ class VerifCode extends Service {
 
   /**
  * 生成哈希字符串
+ * @param {string} applicantType - 申请类型（注册，密码重置）
  * @param {number} applicantId - 申请者的唯一标识 ID。
  * @param {number} issuerId - 发行者（通常是管理员）的唯一标识 ID。
  * @param {number} expiry - 验证代码的到期时间，作为 Unix 时间戳（以毫秒为单位）。
  * @param {string} salt - 8 位 16 进制字符串作随机盐。
  * @return {string} - 生成的 64 个字符长度的 16 进制哈希验证字符串。
  */
-  generateHashStr(applicantId, issuerId, expiry, salt) {
-    const data = JSON.stringify({ applicantId, issuerId, expiry });
+  generateHashStr(applicantType, applicantId, issuerId, expiry, salt) {
+    const data = JSON.stringify({ applicantType, applicantId, issuerId, expiry });
     const hashStr = crypto.createHmac('sha256', salt).update(data).digest('hex');
 
     return hashStr;
