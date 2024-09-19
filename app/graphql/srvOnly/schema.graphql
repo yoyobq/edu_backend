@@ -26,7 +26,7 @@ input VerifEmailInput {
   # 发行者ID（响应申请的管理员）
   issuerId: Int!
   # 验证码的有效期（毫秒）
-  expiryTime: Int!
+  expiryTime: Int
 }
 
 

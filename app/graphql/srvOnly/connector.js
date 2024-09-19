@@ -30,9 +30,10 @@ class VerificationConnector {
    * @return {Promise<Boolean>} 返回邮件是否成功发送的布尔值。
    */
   async sendVerifEmail(params) {
-    const { applicantType, data, email, applicantId, issuerId, expiryTime } = params;
+    const { applicantType, data, email, applicantId, issuerId } = params;
     let subject;
     let content;
+    const expiryTime = 60 * 60 * 1000;
 
     try {
       // 生成验证码
@@ -44,7 +45,7 @@ class VerificationConnector {
           subject = '欢迎注册 SSTS 智能教辅';
           content = `
             您的注册链接是
-            http://192.168.72.10/register/${verificationCode}
+            http://192.168.72.55/register/${verificationCode}
             请点击该链接以继续注册流程，若无法通过点击访问站点，请自行复制链接并粘贴到浏览器地址栏中继续。
           `;
           break;
@@ -54,7 +55,7 @@ class VerificationConnector {
           subject = '密码重置';
           content = `
             您可以通过以下链接重置密码：
-            http://192.168.72.10/resetpwd/${verificationCode}
+            http://192.168.72.55/resetpwd/${verificationCode}
             请点击该链接重置密码`;
           break;
 
