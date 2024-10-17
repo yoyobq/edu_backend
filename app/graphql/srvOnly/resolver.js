@@ -37,5 +37,9 @@ module.exports = {
       // 将请求转发给 connector 处理
       return ctx.connector.srvOnly.sendVerifEmail(params);
     },
+    checkVerifCode: (_, { params }, ctx) => {
+      // 将请求转发给 connector 处理
+      return ctx.connector.srvOnly.checkVerifCode(params);
+    },
   },
 };

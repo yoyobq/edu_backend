@@ -29,11 +29,15 @@ input VerifEmailInput {
   expiryTime: Int
 }
 
+# VerifCode 验证参数
+input CheckVerifCodeInput {
+  # 需要验证的 verifCode
+  verifCode: String!
+}
 
 
 # 定义仅限服务的操作的 Mutation 类型
 extend type Mutation {
-
   """
   生成验证码并发送到指定的邮箱地址。
   根据 applicantType 决定邮件内容
@@ -44,7 +48,14 @@ extend type Mutation {
   @return {Boolean} - 布尔值，表示邮件是否成功发送。
   """
   sendVerifEmail(params: VerifEmailInput!): Boolean
+  """
+  验证验证码。
+  根据传入的 token 和其他参数进行验证
 
+  @param {CheckVerifCodeInput} params - 包含验证所需的所有参数。
+  @return {Boolean} - 布尔值，表示验证码是否有效。
+  """
+  checkVerifCode(params: CheckVerifCodeInput!): Boolean
 }
 
 # 将来可以在此处添加其他仅限服务的操作
