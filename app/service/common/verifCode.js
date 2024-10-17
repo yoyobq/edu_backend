@@ -56,7 +56,6 @@ class VerifCode extends Service {
    * @param {number} applicantId - 申请者ID。
    * @param {number} issuerId - 发行者ID（响应申请的管理员）。
    * @param {number} expiryTime - 验证代码的有效期（毫秒）。
-   * @param {string} [salt] - 可选参数，如果传入则使用此盐值，否则生成新的盐。
    * @return {number} - 生成的验证字符串在数据表中的ID。
    */
   async genVerifCode(applicantType, data, applicantId, issuerId, expiryTime) {
@@ -101,11 +100,10 @@ class VerifCode extends Service {
    * @param {object} data - 申请时携带的自定义数据（JSON 对象）
    * @param {number} applicantId - 申请者ID。
    * @param {number} issuerId - 发行者ID（响应申请的管理员）
-   * @param {number} expiryTime - 验证码的过期时间戳（毫秒）。
    * @return {object|null} - 返回未过期的验证码记录对象，如果不存在则返回 null。
    */
-  async checkValidCode(applicantType, applicantId, issuerId, data) {
-    // 检查数据库中是否已存在未过期的验证码
+  async checkValidCode(applicantType, data, applicantId, issuerId) {
+    // 查询所有符合条件的验证码记录，并按创建时间排序，取出最新一条
     const verifCodeRecord = await this.ctx.model.Common.VerifCode.findOne({
       where: {
         applicantType,
@@ -118,6 +116,8 @@ class VerifCode extends Service {
           [this.ctx.model.Sequelize.Op.gt]: Date.now(),
         },
       },
+      order: [[ 'created_at', 'DESC' ]], // 按 created_at 降序排序
+      limit: 1, // 只取出最新的一条记录
     });
 
     return verifCodeRecord;
@@ -168,13 +168,19 @@ class VerifCode extends Service {
       return false; // 如果没有找到对应的记录，验证失败
     }
 
+    // 检查验证码是否过期
+    const currentTime = Date.now();
+    console.log(currentTime);
+    console.log(verifCodeRecord.expiry);
+    if (currentTime > verifCodeRecord.expiry) {
+      return false; // 验证码已过期，验证失败
+    }
+
     // 使用记录中的信息再次生成验证码
     const regeneratedCodePart = await this.regenerateVerifCode(verifCodeRecord);
 
     // 对比传入的 verifCode 和 生成的验证码的前 56 位
     const originalCodePart = verifCode.slice(0, 56);
-    console.log(originalCodePart);
-    console.log(regeneratedCodePart);
 
     return originalCodePart === regeneratedCodePart;
   }
