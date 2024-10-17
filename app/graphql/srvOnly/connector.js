@@ -87,10 +87,7 @@ class VerificationConnector {
   /**
    * 验证传入的验证码。
    * @param {Object} params - 包含验证所需的所有信息。
-   * @param {String} params.applicantType - 验证码类型（如注册、密码重置等）。
    * @param {String} params.verifCode - 待验证的验证码。
-   * @param {Number} params.applicantId - 申请者ID。
-   * @param {Number} params.issuerId - 发行者ID（响应申请的管理员）。
    * @return {Promise<Boolean>} 返回布尔值，表示验证码是否有效。
    */
   async checkVerifCode({ verifCode }) {
