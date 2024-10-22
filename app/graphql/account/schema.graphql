@@ -1,36 +1,14 @@
 """
-@file schema.graphql
-@description 定义GraphQL模式，描述用户账户相关的类型、输入参数、查询和变更。
+@file account.schema.graphql
+@description 定义了与 accounts 表相关的 GraphQL Schema，描述用户账户信息及其相关操作。
 
 主要功能:
-- 定义Account类型，描述用户账户信息。
-- 定义LoginHistory类型，描述登录记录。
-- 定义QueryParams、LoginParams、UpdateParams和InsertParams输入类型，用于查询和变更操作。
-- 扩展Query和Mutation类型，添加与用户账户相关的查询和变更操作。
+- 扩展 User 聚合，归类 User 中只涉及到 accouts 表的查询或突变。
 
-补充说明:
-- 当你使用一些第三方的库来实现自定义类型时，需要在 GraphQL Schema 文件中定义这个类型。
-- 例如本文档里的 DateTime 和 JSON
--- 请检查公共文件 app/graphql/common/sehema.graphql 检查类型的定义
+注意:
+- 请确保在使用此 Schema 时，理解 User 和 Account 的职责边界，以便更好地维护和扩展。
+- 如果使用自定义类型（如 DateTime 和 JSON），请确保在 app/graphql/common/schema.graphql 中定义相应类型。
 """
-
-# 用户账户信息
-type Account {
-  # 用户 ID
-  id: ID!
-  # 账号名
-  loginName: String
-  # 账号 Email
-  loginEmail: String!
-  # 最近 5 次登录记录
-  recentLoginHistory: [LoginHistory]
-  # 创建时间
-  createdAt: DateTime!
-  # 更新时间
-  updatedAt: DateTime!
-  # 用户状态 "ACTIVE"、"BANNED"、"DELETED"、"PENDING"、"SUSPENDED"、"INACTIVE"
-  status: AccountStatus
-}
 
 # 用户状态枚举类型
 enum AccountStatus {
@@ -56,70 +34,60 @@ type LoginHistory {
   loginIP: String!
 }
 
-# 查询参数
-input QueryParams {
-  # 搜索关键字
-  keyword: String
-  # 分页参数
-  pagination: PaginationInput
-}
-
+# 用户 Login 时的查询参数
 input LoginParams {
+  # 登录名或邮箱
   loginName: String!
+  # 登录密码
   loginPassword: String!
-  type: String!
+  # 登录类型
+  type: String
 }
 
-# 修改参数
-input UpdateParams {
-  # 用户 ID
-  id: ID!
-  # 账号名
-  loginName: String
-  # 账号 Email
-  loginEmail: String
-  # 密码
-  loginPassword: String
-}
+# # 修改参数
+# input UpdateParams {
+#   # 用户 ID
+#   id: ID!
+#   # 账号名
+#   loginName: String
+#   # 账号 Email
+#   loginEmail: String
+#   # 密码
+#   loginPassword: String
+# }
 
-# 插入参数
-input InsertParams {
-  # 账号名
-  loginName: String
-  # 账号 Email
-  loginEmail: String
-  # 密码
-  loginPassword: String!
-  # 员工工号
-  # 请注意，此处的员工工号并非 account 数据库的字段，
-  # 而是 staff 数据库的字段，需要在 service 里进一步操作
-  jobId: Int!
-}
+# # 插入参数
+# input InsertParams {
+#   # 账号名
+#   loginName: String
+#   # 账号 Email
+#   loginEmail: String
+#   # 密码
+#   loginPassword: String!
+#   # 员工工号
+#   # 请注意，此处的员工工号并非 account 数据库的字段，
+#   # 而是 staff 数据库的字段，需要在 service 里进一步操作
+#   jobId: Int!
+# }
 
-# 分页参数
-input PaginationInput {
-  # 当前页码
-  current: Int!
-  # 每页数量
-  pageSize: Int!
-}
+
 
 # 修改结果
-extend type Mutation {
+# extend type Mutation {
   # 修改用户账户信息
-  updateAccount(params: UpdateParams!): Account
+  # updateAccount(params: UpdateParams!): Account
   # 插入新的用户账户信息
-  insertAccount(params: InsertParams!): Account
-} 
+  # insertAccount(params: InsertParams!): Account
+# } 
 
 # 查询结果
 extend type Query {
-  # 查询用户账户信息列表
-  accounts(params: String): [Account]!
-  # 此处带参数的 UserAccount 查询，可以根据id返回包含了某个用户的具体信息的对象
-  account(id: Int): Account
-  # 可以根据 email 返回包含了某个用户的具体信息的对象
-  accountByLoginEmail(loginEmail: String): Account
-  # 查询是否存在用户名密码对，确认用户登录信息
-  checkAccount(params: LoginParams): JSON
+  """
+  用户登录检查（userLoginCheck）查询逻辑现在由 app/graphql/account 中的 resolver 处理。
+  虽然从逻辑上它属于 User 聚合的一部分，取名的时候也特意用 user 前缀表示这个关系
+  但因为这次操作只涉及到 account 表，所以我将定义和实现都放在了 Account 模块中。
+  这样做的好处是不用维护一个未来会特别臃肿的 User 模块。
+  但也可能让人对 User 和 Accout 的逻辑关系产生困惑，以为他是平级的，特此说明。
+  """
+  userLoginCheck(params: LoginParams): JSON
 }

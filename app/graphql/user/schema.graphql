@@ -1,26 +1,75 @@
+"""
+该 GraphQL schema 设计基于领域驱动设计（DDD），以 `account` 为实体，`User` 作为聚合根。
+`User` 类型整合了用户的基础账号信息（account）以及其角色相关的详细信息（如教师信息 staffInfo 和学生信息 studentInfo）。
+
+在这个设计中：
+- `User` 作为聚合根，统一管理与用户相关的数据操作，并聚合了与 `account` 实体相关的数据。
+- 通过 `role` 字段区分用户的具体类型（教师或学生），并根据角色提供不同的子对象信息。
+- 这种设计确保了用户信息的统一访问入口，同时保持了对教师和学生角色的灵活扩展能力。
+
+所有与用户相关的查询和变更操作均通过该 `User` 类型进行。
+"""
+
+
+# 定义用户类型
 type User {
+  id: Int!                 # 使用 accountId 作为唯一标识
+  loginName: String        # 登录名，对应 account 表中的 login_name
+  nickname: String         # 昵称，对应 userInfo 表中的 nickname
+  loginEmail: String       # 对应 account 表中的 login_email
+  avatar: String           # 对应 userInfo 表中的 avatar
+  email: String!           # 对应 userInfo 表中的 email
+  signature: String        # 对应 userInfo 表中的 signature
+  accessGroup: JSON        # 对应 userInfo 表中的 access_group
+  address: String          # 对应 userInfo 表中的 address
+  phone: String            # 对应 userInfo 表中的 phone
+  notifyCount: Int         # 对应 userInfo 表中的 notify_count
+  unreadCount: Int         # 对应 userInfo 表中的 unread_count
+  role: String!            # 用户角色，例如 "staff" 或 "student"
+  staffInfo: Staff         # 教师信息，可能为 null
+  studentInfo: Student     # 学生信息，可能为 null
+}
+
+# # 教师信息类型
+# type Staff {
+#   id: Int!
+#   jobId: Int!
+#   name: String             # 教师姓名
+#   age: Int
+#   departmentId: Int
+#   jobTitle: String         # 职位
+#   remarks: String
+#   createdAt: String
+#   updatedAt: String
+# }
+
+# 学生信息类型
+type Student {
   id: Int!
-  accountId: Int!
-  name: String!
-  avatar: String
-  email: String!
-  signature: String
-  accessGroup: JSON
-  address: String
-  phone: String
-  tags: JSON
-  geographic: JSON
-  notifyCount: Int
-  unreadCount: Int
+  stuId: Int!
+  name: String             # 学生姓名，对应 student 表中的 name
+  age: Int
+  departmentId: Int
+  classId: Int             # 班级ID
+  clubId: Int              # 社团ID
+  remarks: String
+  createdAt: String
+  updatedAt: String
 }
 
-type Users {
-  users: [User!]
+# 枚举 role 类型
+enum UserRole {
+  STAFF
+  STUDENT
+  GUEST
 }
 
+# 创建用户的输入类型
 input CreateUserInput {
-  accountId: Int!
-  name: String!
+  loginName: String!
+  loginEmail: String!
+  loginPassword: String!
+  nickname: String!
   avatar: String
   email: String!
   signature: String
@@ -31,10 +80,12 @@ input CreateUserInput {
   geographic: JSON
   notifyCount: Int
   unreadCount: Int
+  role: String!           # 用户角色，必须为 "staff" 或 "student"
 }
 
+# 更新用户信息的输入类型
 input UpdateUserInput {
-  name: String
+  nickname: String
   avatar: String
   email: String
   signature: String
@@ -47,14 +98,13 @@ input UpdateUserInput {
   unreadCount: Int
 }
 
+# 定义 GraphQL 的查询和变更类型
 extend type Query {
-  # 根据 id 或者 accountId 查找 User 信息，id 优先，这两个查询返回的记录都是唯一的
-  user(id: Int, accountId:Int): User
-  users: [User]
+  getUserDetails(id: Int!): User
+  listUsers: [User]       # 列出所有用户
 }
 
 extend type Mutation {
-  createBaseUserInfo(input: CreateUserInput!): User!
-  updateBaseUserInfo(id: Int!, input: UpdateUserInput!): User!
-  deleteBaseUserInfo(id: Int!): User!
+  createUser(params: CreateUserInput!): User
+  updateUser(id: Int!, params: UpdateUserInput!): User
 }

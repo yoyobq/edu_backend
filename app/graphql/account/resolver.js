@@ -42,15 +42,19 @@ const { DateTimeResolver } = require('graphql-scalars');
 
 module.exports = {
   Query: {
-    accounts: (_, { params }, ctx) => {
-      const res = ctx.connector.account.fetchAll(params);
-      return res;
+    // 检查用户登录账户密码
+    async userLoginCheck(_, { params }, ctx) {
+      return await ctx.connector.account.userLoginCheck(params);
     },
+    // accounts: (_, { params }, ctx) => {
+    //   const res = ctx.connector.account.fetchAll(params);
+    //   return res;
+    // },
 
-    account: (_, { id }, ctx) => {
-      const res = ctx.connector.account.fetchById(id);
-      return res;
-    },
+    // account: (_, { id }, ctx) => {
+    //   const res = ctx.connector.account.fetchById(id);
+    //   return res;
+    // },
 
     accountByLoginEmail: (_, { loginEmail }, ctx) => {
       const res = ctx.connector.account.fetchByLoginEmail(loginEmail);
@@ -58,21 +62,21 @@ module.exports = {
     },
 
     // 此处函数名应遵照 schema 中的定义
-    checkAccount: (_, { params }, ctx) => {
-      const res = ctx.connector.account.findLoginAccount(params);
-      return res;
-    },
+    // checkAccount: (_, { params }, ctx) => {
+    //   const res = ctx.connector.account.findLoginAccount(params);
+    //   return res;
+    // },
   },
 
-  Mutation: {
-    updateAccount: (_, { params }, ctx) => {
-      return ctx.connector.account.update(params);
-    },
+  // Mutation: {
+  //   updateAccount: (_, { params }, ctx) => {
+  //     return ctx.connector.account.update(params);
+  //   },
 
-    insertAccount: (_, { params }, ctx) => {
-      return ctx.connector.account.insert(params);
-    },
-  },
+  //   insertAccount: (_, { params }, ctx) => {
+  //     return ctx.connector.account.insert(params);
+  //   },
+  // },
 
   DateTime: DateTimeResolver,
 };

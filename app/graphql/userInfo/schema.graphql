@@ -1,34 +1,49 @@
-type UserInfo {
-  id: ID!
-  accountId: ID!
-  name: String!
-  avatar: String
-  email: String!
-  signature: String
-  accessGroup: [String]!
-  address: String
-  phone: String
-  tags: [String]
-  geographic: JSON
-  notifyCount: Int
-  unreadCount: Int
-  gender: Gender
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-# 在 GraphQL 枚举类型中定义的值通常是大写的
-enum Gender {
-  MALE
-  FEMALE
-  SECRET
-}
-
-# input InsertUserInfoInput {
+# type UserInfo {
+#   id: ID!
 #   accountId: ID!
 #   name: String!
 #   avatar: String
 #   email: String!
+#   signature: String
+#   accessGroup: [String]!
+#   address: String
+#   phone: String
+#   tags: [String]
+#   geographic: JSON
+#   notifyCount: Int
+#   unreadCount: Int
+#   gender: Gender
+#   createdAt: DateTime!
+#   updatedAt: DateTime!
+# }
+
+# # 在 GraphQL 枚举类型中定义的值通常是大写的
+# enum Gender {
+#   MALE
+#   FEMALE
+#   SECRET
+# }
+
+# # input InsertUserInfoInput {
+# #   accountId: ID!
+# #   name: String!
+# #   avatar: String
+# #   email: String!
+# #   signature: String
+# #   accessGroup: [String]
+# #   address: String
+# #   phone: String
+# #   tags: [String]
+# #   geographic: JSON
+# #   gender: Gender
+# # }
+
+# input UpdateUserInfoInput {
+#   id: ID!
+#   accountId: ID
+#   name: String
+#   avatar: String
+#   email: String
 #   signature: String
 #   accessGroup: [String]
 #   address: String
@@ -38,27 +53,12 @@ enum Gender {
 #   gender: Gender
 # }
 
-input UpdateUserInfoInput {
-  id: ID!
-  accountId: ID
-  name: String
-  avatar: String
-  email: String
-  signature: String
-  accessGroup: [String]
-  address: String
-  phone: String
-  tags: [String]
-  geographic: JSON
-  gender: Gender
-}
+# extend type Query {
+#   userInfo(id: ID!): UserInfo
+#   userInfoList(page: Int!, pageSize: Int!): [UserInfo]!
+# }
 
-extend type Query {
-  userInfo(id: ID!): UserInfo
-  userInfoList(page: Int!, pageSize: Int!): [UserInfo]!
-}
-
-extend type Mutation {
-  # insertUserInfo(params: InsertUserInfoInput!): UserInfo
-  updateUserInfo(params: UpdateUserInfoInput!): UserInfo
-}
+# extend type Mutation {
+#   # insertUserInfo(params: InsertUserInfoInput!): UserInfo
+#   updateUserInfo(params: UpdateUserInfoInput!): UserInfo
+# }

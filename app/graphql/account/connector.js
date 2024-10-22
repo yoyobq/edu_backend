@@ -13,32 +13,12 @@ class AccountConnector {
     this.service = ctx.service.user.account;
   }
 
-  async fetchById(id) {
-    const account = await this.service.findById(id);
-    return account;
-  }
-
-  async fetchByLoginEmail(loginEmail) {
-    const account = await this.service.findByLoginEmail(loginEmail);
+  async userLoginCheck(params) {
+    const account = await this.service.userLoginCheck(params);
     return account;
   }
 
 
-  async findLoginAccount(params) {
-    const account = await this.service.findLoginAccount(params);
-    return account;
-  }
-
-  async update(params) {
-    const { id, ...updateData } = params;
-    const updatedUserAccount = await this.service.update({ id, updates: updateData });
-    return updatedUserAccount;
-  }
-
-  async insert(params) {
-    const newAccount = await this.service.create(params);
-    return newAccount;
-  }
 }
 
 module.exports = AccountConnector;

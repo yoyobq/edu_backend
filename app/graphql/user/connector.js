@@ -1,43 +1,65 @@
 'use strict';
 
+/**
+ * @file connector.js
+ * @description 用户连接器，处理与用户相关的服务调用。
+ * 将 GraphQL 的查询和变更请求转发到对应的 service 方法。
+ *
+ * @module graphql/user/connector
+ */
+
 class UserConnector {
   constructor(ctx) {
     this.ctx = ctx;
+    this.userService = ctx.service.user.user; // user 聚合的服务
+    this.accountService = ctx.service.user.account;
   }
 
-  async fetchAll() {
-    const ctx = this.ctx;
-    const query = {
-      // limit: ctx.helper.parseInt(ctx.query.limit),
-      // offset: ctx.helper.parseInt(ctx.query.offset),
-    };
-    const users = await ctx.service.user.user.list(query);
-    // 此处返回的数据类型应该与schema中的定义一致
-    return users;
+  /**
+   * 获取单个用户信息。
+   * @param {number} accountId - 用户账户的 ID。
+   * @return {Promise<object>} - 用户信息，包括 account, userInfo, staffInfo, studentInfo。
+   */
+  async getUserDetails(accountId) {
+    // 调用 service 层的方法获取用户信息
+    return await this.userService.getUserDetails(accountId);
   }
 
-  async fetchById(id) {
-    const ctx = this.ctx;
-    const user = await ctx.service.user.user.find(ctx.helper.parseInt(id));
-
-    return user;
+  /**
+   * 获取所有用户列表。
+   * @return {Promise<Array>} - 返回用户列表。
+   */
+  async listUsers() {
+    // 调用 service 层的方法获取用户列表
+    return await this.userService.listUsers();
   }
 
-  async fetchByAccountId(accountId) {
-    const ctx = this.ctx;
-    // 实际上，前端传来什么样的 id 都是无所谓的，最终用于查询权限的 id 来自 jwt
-    accountId = ctx.state.user.id;
-    const user = await ctx.service.user.user.findWithCondition({
-      where: { accountId },
-    });
+  /**
+   * 创建新用户。
+   * @param {object} params - 创建用户的参数。
+   * @param {string} params.loginName - 用户登录名。
+   * @param {string} params.loginEmail - 用户邮箱。
+   * @param {string} params.loginPassword - 用户密码。
+   * @param {string} params.nickname - 用户昵称。
+   * @param {string} params.role - 用户角色（staff 或 student）。
+   * @param {object} params.userInfo - 用户基本信息。
+   * @return {Promise<object>} - 返回新创建的用户信息。
+   */
+  async createUser(params) {
+    // 调用 service 层的方法创建用户
+    return await this.userService.createUser(params);
+  }
 
-    if (user !== null) {
-      return user;
-    }
-
-    throw new Error('account_id 为' + accountId + '的用户信息不存在');
+  /**
+   * 更新用户信息。
+   * @param {number} accountId - 用户账户的 ID。
+   * @param {object} params - 更新的参数。
+   * @return {Promise<object>} - 返回更新后的用户信息。
+   */
+  async updateUser(accountId, params) {
+    // 调用 service 层的方法更新用户信息
+    return await this.userService.updateUser(accountId, params);
   }
 }
 
 module.exports = UserConnector;
-
