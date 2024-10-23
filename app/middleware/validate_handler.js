@@ -75,7 +75,7 @@ module.exports = (_, app) => {
           default:
         }
 
-        console.log(isPathValid);
+        // console.log(isPathValid);
 
         if (!isPathValid) {
           ctx.body = {
@@ -148,6 +148,7 @@ module.exports = (_, app) => {
           }
 
           console.log(`来自 ${path} 的 token 验证通过`);
+
           // 将解码后的 payload 数据保存到 ctx.state.user 属性中
           ctx.state.user = payload;
         } catch (err) {

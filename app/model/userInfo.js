@@ -15,7 +15,7 @@ module.exports = app => {
       allowNull: false,
       field: 'account_id',
     },
-    name: {
+    nickname: {
       type: STRING(50),
       allowNull: false,
     },

@@ -59,7 +59,6 @@ class VerifCode extends Service {
    * @return {number} - 生成的验证字符串在数据表中的ID。
    */
   async genVerifCode(applicantType, data, applicantId, issuerId, expiryTime) {
-    console.log('gen start');
     // 生成盐
     const salt = crypto.randomBytes(8).toString('hex');
     // 计算过期时间
@@ -86,11 +85,9 @@ class VerifCode extends Service {
  */
   async regenerateVerifCode(record) {
     const { applicantType, applicantId, issuerId, expiry, salt, data } = record;
-    console.log(data);
-
     // 使用旧记录中的数据生成 hash 字符串
-    const hashStr = this.generateHashStr(applicantType, applicantId, issuerId, expiry, salt);
-
+    // 请注意，虽然传参时候提供了 data 但实际生成 hashStr 的时候并未使用
+    const hashStr = this.generateHashStr(applicantType, applicantId, issuerId, expiry, salt, data);
     return hashStr.slice(0, 56);
   }
 
@@ -170,8 +167,6 @@ class VerifCode extends Service {
 
     // 检查验证码是否过期
     const currentTime = Date.now();
-    console.log(currentTime);
-    console.log(verifCodeRecord.expiry);
     if (currentTime > verifCodeRecord.expiry) {
       return false; // 验证码已过期，验证失败
     }

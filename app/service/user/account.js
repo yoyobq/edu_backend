@@ -33,12 +33,13 @@ class Account extends Service {
     return account;
   }
 
-  async findLoginAccount(condition) {
+  async userLoginCheck(loginParams) {
     // 如果 params 的值为假值（如 null、undefined、false 等），
     // 则使用一个空对象 {} 作为默认值，以避免后续的代码抛出错误。
     // 此处 type 未使用，但留存备用
     // eslint-disable-next-line no-unused-vars
-    const { loginName, loginPassword, type } = condition || {};
+    const { loginName, loginPassword, type } = loginParams || {};
+
     let loginAccount = {};
     const emailRegex = /^\S+@\S+\.\S+$/;
 
@@ -63,7 +64,6 @@ class Account extends Service {
 
     const account = await this.findWithCondition(loginAccount);
     let token;
-    // console.log(account);
     if (account) {
       switch (account.dataValues.status) {
         case 'ACTIVE':
@@ -198,7 +198,6 @@ class Account extends Service {
 
   async update({ id, updates }) {
     const account = await this.ctx.model.Account.findByPk(id);
-    console.log(updates);
     if (!account) {
       this.ctx.throw(404, '账号不存在');
     }
