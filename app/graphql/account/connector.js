@@ -18,7 +18,11 @@ class AccountConnector {
     return account;
   }
 
-
+  async userByLoginEmail(loginEmail) {
+    console.log('finding account');
+    const account = await this.service.findByLoginEmail(loginEmail);
+    return account;
+  }
 }
 
 module.exports = AccountConnector;

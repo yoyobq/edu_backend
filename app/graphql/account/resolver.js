@@ -43,8 +43,8 @@ const { DateTimeResolver } = require('graphql-scalars');
 module.exports = {
   Query: {
     // 检查用户登录账户密码
-    async userLoginCheck(_, { params }, ctx) {
-      return await ctx.connector.account.userLoginCheck(params);
+    userLoginCheck: (_, { params }, ctx) => {
+      return ctx.connector.account.userLoginCheck(params);
     },
     // accounts: (_, { params }, ctx) => {
     //   const res = ctx.connector.account.fetchAll(params);
@@ -56,9 +56,8 @@ module.exports = {
     //   return res;
     // },
 
-    accountByLoginEmail: (_, { loginEmail }, ctx) => {
-      const res = ctx.connector.account.fetchByLoginEmail(loginEmail);
-      return res;
+    userByLoginEmail: (_, { loginEmail }, ctx) => {
+      return ctx.connector.account.userByLoginEmail(loginEmail);
     },
 
     // 此处函数名应遵照 schema 中的定义

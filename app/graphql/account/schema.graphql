@@ -10,6 +10,15 @@
 - 如果使用自定义类型（如 DateTime 和 JSON），请确保在 app/graphql/common/schema.graphql 中定义相应类型。
 """
 
+type Account {
+  id: Int!
+  loginEmail: String!
+  loginName: String!
+  Status: AccountStatus!
+}
+
+
+
 # 用户状态枚举类型
 enum AccountStatus {
   # 活跃状态
@@ -90,4 +99,7 @@ extend type Query {
   但也可能让人对 User 和 Accout 的逻辑关系产生困惑，以为他是平级的，特此说明。
   """
   userLoginCheck(params: LoginParams): JSON
+
+  # 根据 loginEmail 字段查询用户信息
+  userByLoginEmail(loginEmail: String!): Account
 }
