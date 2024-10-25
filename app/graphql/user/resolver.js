@@ -21,14 +21,14 @@ module.exports = {
   },
 
   Mutation: {
-    // 创建新用户
-    async createUser(_, { params }, ctx) {
-      return await ctx.connector.user.createUser(params);
+    // 注册流程，整合注册信息后创建新用户
+    registerUser: (_, { input }, ctx) => {
+      return ctx.connector.user.registerUser(input);
     },
 
     // 更新用户信息
-    async updateUser(_, { id, params }, ctx) {
-      return await ctx.connector.user.updateUser(id, params);
+    updateUser: (_, { id, params }, ctx) => {
+      return ctx.connector.user.updateUser(id, params);
     },
   },
 };

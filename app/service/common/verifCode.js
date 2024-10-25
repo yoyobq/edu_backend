@@ -23,6 +23,9 @@
  */
 
 const crypto = require('crypto');
+const { Op } = require('sequelize');
+// eslint-disable-next-line no-unused-vars
+const { EggConsoleLogger } = require('egg-logger');
 const Service = require('egg').Service;
 
 class VerifCode extends Service {
@@ -39,7 +42,7 @@ class VerifCode extends Service {
  * @return {Promise<string>} - 返回生成的验证码字符串（已存在的或新生成的）。
  */
   async getVerifCode({ applicantType, data, applicantId, issuerId, expiryTime }) {
-    const verifCodeRecord = await this.checkValidCode(applicantType, applicantId, issuerId, data);
+    const verifCodeRecord = await this.checkValidCode({ applicantType, applicantId, issuerId, data });
 
     if (verifCodeRecord) {
       const encryptedId = this.encryptId(verifCodeRecord.id);
@@ -64,7 +67,7 @@ class VerifCode extends Service {
     // 计算过期时间
     const expiry = Date.now() + expiryTime;
     // 生成 hash 字符串
-    const hashStr = this.generateHashStr(applicantType, applicantId, issuerId, expiry, salt);
+    const hashStr = this.generateHashStr(applicantType, applicantId, issuerId, salt);
     // 存储到数据库
     const id = await this.storeVeriCode(applicantType, data, applicantId, issuerId, expiry, salt, hashStr);
     // 加密混淆 ID
@@ -84,23 +87,25 @@ class VerifCode extends Service {
  * @return {string} - 返回重新生成的验证字符串。
  */
   async regenerateVerifCode(record) {
-    const { applicantType, applicantId, issuerId, expiry, salt, data } = record;
+    const { applicantType, applicantId, issuerId, salt, data } = record;
     // 使用旧记录中的数据生成 hash 字符串
     // 请注意，虽然传参时候提供了 data 但实际生成 hashStr 的时候并未使用
-    const hashStr = this.generateHashStr(applicantType, applicantId, issuerId, expiry, salt, data);
+    const hashStr = this.generateHashStr(applicantType, applicantId, issuerId, salt, data);
     return hashStr.slice(0, 56);
   }
 
   /**
-   * 检查数据库中是否存在未过期的验证码。
-   * @param {string} applicantType - 申请类型（注册，密码重置）
-   * @param {object} data - 申请时携带的自定义数据（JSON 对象）
-   * @param {number} applicantId - 申请者ID。
-   * @param {number} issuerId - 发行者ID（响应申请的管理员）
+   * 根据申请数据检查数据库中是否存在未过期的验证码。
+   * @param {object} params - 数据库中的验证码记录
+   * @param {string} params.applicantType - 申请类型（注册，密码重置）
+   * @param {object} params.data - 申请时携带的自定义数据（JSON 对象）
+   * @param {number} params.applicantId - 申请者ID。
+   * @param {number} params.issuerId - 发行者ID（响应申请的管理员）
    * @return {object|null} - 返回未过期的验证码记录对象，如果不存在则返回 null。
    */
-  async checkValidCode(applicantType, data, applicantId, issuerId) {
+  async checkValidCode({ applicantType, applicantId, issuerId, data }) {
     // 查询所有符合条件的验证码记录，并按创建时间排序，取出最新一条
+    const currentTime = Date.now();
     const verifCodeRecord = await this.ctx.model.Common.VerifCode.findOne({
       where: {
         applicantType,
@@ -108,9 +113,7 @@ class VerifCode extends Service {
         applicantId,
         issuerId,
         expiry: {
-          // 在这段代码中，expiry 字段的值是一个时间戳，代表验证码的过期时间。
-          // 通过查询 expiry 是否大于当前时间戳 Date.now()，就可以判断该验证码是否未过期（未过期的记录）。
-          [this.ctx.model.Sequelize.Op.gt]: Date.now(),
+          [Op.gt]: currentTime, // 只查询未过期的记录
         },
       },
       order: [[ 'created_at', 'DESC' ]], // 按 created_at 降序排序
@@ -149,12 +152,26 @@ class VerifCode extends Service {
   }
 
   /**
-   * 验证传入的 verifCode。
+ * 根据传入的 verifCode 获取对应的记录。
+ * @param {string} verifCode - 需要验证的验证码。
+ * @return {Promise<object|null>} - 返回对应的记录对象，如果不存在则返回 null。
+ */
+  async getVerifCodeRecord(verifCode) {
+    const encryptedId = verifCode.slice(56, 64);
+    const id = this.decryptId(encryptedId);
+
+    // 根据 ID 从数据库中获取相应的记录
+    const verifCodeRecord = await this.ctx.model.Common.VerifCode.findByPk(id);
+    return verifCodeRecord;
+  }
+
+  /**
+   * 用于 checkVerifCode 和 verifyAndGetRecord 的
+   * 通用的验证逻辑，用于获取并验证验证码记录。
    * @param {string} verifCode - 需要验证的验证码。
-   * @return {Promise<boolean>} - 验证结果，布尔值表示验证码是否有效。
+   * @return {Promise<object|null>} - 如果验证成功，返回对应的记录对象，否则返回 null。
    */
-  async checkVerifCode(verifCode) {
-  // 截取 verifCode 的后 8 位，并通过 decryptId 解密获取记录 ID
+  async validateVerifCode(verifCode) {
     const encryptedId = verifCode.slice(56, 64);
     const id = this.decryptId(encryptedId);
 
@@ -162,22 +179,52 @@ class VerifCode extends Service {
     const verifCodeRecord = await this.ctx.model.Common.VerifCode.findByPk(id);
 
     if (!verifCodeRecord) {
-      return false; // 如果没有找到对应的记录，验证失败
+      return null; // 如果没有找到对应的记录，验证失败
     }
 
     // 检查验证码是否过期
     const currentTime = Date.now();
     if (currentTime > verifCodeRecord.expiry) {
-      return false; // 验证码已过期，验证失败
+      return null; // 验证码已过期，验证失败
     }
 
     // 使用记录中的信息再次生成验证码
     const regeneratedCodePart = await this.regenerateVerifCode(verifCodeRecord);
-
-    // 对比传入的 verifCode 和 生成的验证码的前 56 位
     const originalCodePart = verifCode.slice(0, 56);
 
-    return originalCodePart === regeneratedCodePart;
+    // 如果验证码前 56 位匹配，返回记录对象，否则返回 null
+    return originalCodePart === regeneratedCodePart ? verifCodeRecord : null;
+  }
+
+  /**
+   * 验证传入的 verifCode, 返回是否存在未过期的对应记录，
+   * 且如果存在对应记录，则延长过期时间，给用户填写注册信息留下空挡
+   * @param {string} verifCode - 需要验证的验证码。
+   * @return {Promise<boolean>} - 验证结果，布尔值表示验证码是否有效。
+   */
+  async checkVerifCode(verifCode) {
+    const verifCodeRecord = await this.validateVerifCode(verifCode);
+
+    if (verifCodeRecord) {
+      const additionalTime = 30 * 60 * 1000;
+      verifCodeRecord.expiry += additionalTime;
+      await verifCodeRecord.save();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 验证传入的 verifCode，并返回对应的记录数据（如果需要）。
+   * @param {string} verifCode - 需要验证的验证码。
+   * @return {Promise<object|null>} - 如果验证成功，返回对应的记录对象，否则返回 null。
+   */
+  async verifyAndGetRecord(verifCode) {
+    const verifCodeRecord = await this.validateVerifCode(verifCode);
+    if (verifCodeRecord) {
+      return verifCodeRecord;
+    }
+    return null;
   }
 
   /**
@@ -185,12 +232,11 @@ class VerifCode extends Service {
  * @param {string} applicantType - 申请类型（注册，密码重置）
  * @param {number} applicantId - 申请者的唯一标识 ID。
  * @param {number} issuerId - 发行者（通常是管理员）的唯一标识 ID。
- * @param {number} expiry - 验证代码的到期时间，作为 Unix 时间戳（以毫秒为单位）。
  * @param {string} salt - 8 位 16 进制字符串作随机盐。
  * @return {string} - 生成的 64 个字符长度的 16 进制哈希验证字符串。
  */
-  generateHashStr(applicantType, applicantId, issuerId, expiry, salt) {
-    const data = JSON.stringify({ applicantType, applicantId, issuerId, expiry });
+  generateHashStr(applicantType, applicantId, issuerId, salt) {
+    const data = JSON.stringify({ applicantType, applicantId, issuerId });
     const hashStr = crypto.createHmac('sha256', salt).update(data).digest('hex');
 
     return hashStr;

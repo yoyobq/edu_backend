@@ -36,18 +36,16 @@ class UserConnector {
 
   /**
    * 创建新用户。
-   * @param {object} params - 创建用户的参数。
-   * @param {string} params.loginName - 用户登录名。
-   * @param {string} params.loginEmail - 用户邮箱。
-   * @param {string} params.loginPassword - 用户密码。
-   * @param {string} params.nickname - 用户昵称。
-   * @param {string} params.role - 用户角色（staff 或 student）。
-   * @param {object} params.userInfo - 用户基本信息。
+   * @param {object} input - 创建用户的参数。
+   * @param {string} input.loginName - 用户登录名。
+   * @param {string} input.loginPassword - 用户密码。
+   * @param {string} input.nickname - 用户昵称。
+   * @param {object} input.verifCode - 用户基本信息。
    * @return {Promise<object>} - 返回新创建的用户信息。
    */
-  async createUser(params) {
+  async registerUser(input) {
     // 调用 service 层的方法创建用户
-    return await this.userService.createUser(params);
+    return await this.userService.registerUser(input);
   }
 
   /**

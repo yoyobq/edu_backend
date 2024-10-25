@@ -64,23 +64,18 @@ enum UserRole {
   GUEST
 }
 
-# 创建用户的输入类型
-input CreateUserInput {
-  loginName: String!
+input RegisterUserInput {
+  # 用户的注册 email，
+  # 请注意，这个字段仅用于冗余的安全验证，并不参与注册
   loginEmail: String!
+  # 用户的登录名，可以是自定义的用户名
+  loginName: String!
+  # 登录密码，必填
   loginPassword: String!
-  nickname: String!
-  avatar: String
-  email: String!
-  signature: String
-  accessGroup: JSON
-  address: String
-  phone: String
-  tags: JSON
-  geographic: JSON
-  notifyCount: Int
-  unreadCount: Int
-  role: String!           # 用户角色，必须为 "staff" 或 "student"
+  # 昵称，可选
+  nickname: String
+  # 验证码，用于验证和获取 JobId，loginEmail 等敏感数据
+  verifCode: String!
 }
 
 # 更新用户信息的输入类型
@@ -105,6 +100,11 @@ extend type Query {
 }
 
 extend type Mutation {
-  createUser(params: CreateUserInput!): User
+  """
+  注册新用户。
+  需要提供登录邮箱、密码、昵称和验证码。
+  验证码用于获取数据库中存储的其他注册信息（如 jobId、loginEmail 等）。
+  """
+  registerUser(input: RegisterUserInput!): Boolean!
   updateUser(id: Int!, params: UpdateUserInput!): User
 }

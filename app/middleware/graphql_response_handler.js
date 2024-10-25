@@ -53,7 +53,7 @@ module.exports = () => {
         // 在控制台输出错误
         if (response.errors) {
           console.log('------- Graphql 异常处理信息 -------');
-          console.log(response.errors[0]);
+          console.log(response);
           // console.log(response.errors[0].extensions.code);
         }
         const success = !response.errors;

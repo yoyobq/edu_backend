@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+const crypto = require('crypto');
 
 /** 23-3-18 Service 的职责是处理业务逻辑，它应该是抽象的，独立于任何数据源。
  *  因此，在 GraphQL + Sequelize 的架构中，
@@ -108,70 +109,69 @@ class Account extends Service {
   //   loginPassword: 'password123',
   // }
 
-  async createOld(account) {
-    if (!account.loginEmail && !account.loginName) {
-      this.ctx.throw(403, '非法注册，后台已记录。');
-    }
-
-    if (!this.isValidEmail(account.loginEmail)) {
-      this.ctx.throw(403, '非法注册，Email 地址不合法。');
-    }
-
-    if (account.loginEmail) {
-      // 如果提供的参数中包含 loginEmail，则检查是否已经存在相同的 loginEmail
-      const existingAccount = await this.ctx.model.Account.findOne({ where: { loginEmail: account.loginEmail } });
-      if (existingAccount) {
-        this.ctx.throw(403, `${account.loginEmail} 该邮箱已存在。`);
-      }
-    }
-
-    const newAccount = await this.ctx.model.Account.create(account);
-    return newAccount;
+  /**
+ * 根据传入的密码和盐值生成哈希字符串。
+ * @param {string} password - 用户的密码。
+ * @param {string} salt - 用于加密的盐值。
+ * @return {string} - 返回加密后的哈希字符串。
+ */
+  hashPassword(password, salt) {
+    const hash = crypto.pbkdf2Sync(password, salt, 5000, 64, 'sha256').toString('hex');
+    return hash;
   }
 
-  async create(account) {
+  async create({
+    loginPassword,
+    loginEmail,
+    loginName,
+    nickname,
+    jobId,
+    name,
+  }) {
+    console.log('create:', loginPassword, loginEmail, loginName, nickname, jobId, name);
     let transaction;
     try {
       transaction = await this.ctx.model.transaction();
 
-      if (account.loginEmail) {
+      if (loginEmail) {
         // 如果提供的参数中包含 loginEmail，则检查是否已经存在相同的 loginEmail
-        const existingAccount = await this.ctx.model.Account.findOne({ where: { loginEmail: account.loginEmail } }, { transaction });
+        const existingAccount = await this.ctx.model.Account.findOne({ where: { loginEmail } }, { transaction });
         if (existingAccount) {
-          this.ctx.throw(403, `${account.loginEmail} 该邮箱已存在。`);
+          this.ctx.throw(403, `${loginEmail} 该邮箱已存在。`);
         }
-      } else {
-        // 此条是安全防护，若未提供 loginEmail，一定是绕过了正常的注册流程
-        this.ctx.throw(403, '非法注册，后台已记录。');
       }
 
-      const newAccount = await this.ctx.model.Account.create(account, { transaction });
+      const newAccount = await this.ctx.model.Account.create({
+        loginName,
+        loginEmail,
+        loginPassword,
+      }, { transaction });
+
+      // 计算哈希密码
+      const salt = newAccount.createdAt.toString();
+      const hashedPassword = await this.hashPassword(newAccount.loginPassword, salt);
+      // 更新账户记录中的密码字段
+      newAccount.loginPassword = hashedPassword;
+      // 保存更新后的账户记录
+      await newAccount.save({ transaction });
 
       // 获取新创建账号的 ID
       const accountId = newAccount.id;
-      const jobId = account.jobId;
-
-      // 通过 jobId 查询对应的姓名
-      const staffIndex = await this.ctx.service.user.staffIndex.findByJobId(jobId);
-
-      let name = staffIndex.name;
-      const index = name.indexOf(']');
-      name = name.substring(index + 1).trim();
-
       // 创建账号基本信息 写入 user_accounts 表
       const userInfoData = {
         accountId,
-        name,
+        nickname,
         // TODO: 此处要考虑下默认用户头像的生成
         // avatar: 'http://example.com/avatar.jpg',
-        email: account.loginEmail,
+        email: loginEmail,
         signature: 'Hello, world!',
-        accessGroup: [ 'guest' ],
+        accessGroup: [ 'teacher' ],
       };
 
-      const newUserInfo = await this.ctx.service.user.userInfo.create({ userInfoData, transaction });
+      // const newUserInfo =
+      await this.ctx.service.user.userInfo.create({ userInfoData, transaction });
       // const newUserInfo = await this.ctx.model.UserInfo.create(userInfoData, { transaction });
-      console.log(newUserInfo);
+      // console.log(newUserInfo);
 
       // 创建员工数据，写入 staff 表
       const staffData = {
@@ -181,9 +181,10 @@ class Account extends Service {
         // 其他相关字段的赋值
       };
 
-      const newStaff = await this.ctx.service.user.staff.create({ staffData, transaction });
+      // const newStaff =
+      await this.ctx.service.user.staff.create({ staffData, transaction });
       // const newStaff = await this.ctx.model.Staff.create(staffData, { transaction });
-      console.log(newStaff);
+      // console.log(newStaff);
 
       // 提交事务
       await transaction.commit();

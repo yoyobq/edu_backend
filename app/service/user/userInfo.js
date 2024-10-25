@@ -30,8 +30,8 @@ class UserInfoService extends Service {
     //   this.ctx.throw(400, `accountId 为 ${userInfo.accountId} 的账号不存在。`);
     // }
 
-    if (!userInfoData.email && !userInfoData.name) {
-      this.ctx.throw(400, '请提供用户 name 和 email 字段。');
+    if (!userInfoData.email && !userInfoData.nickname) {
+      this.ctx.throw(400, '请提供用户 nickname 和 email 字段。');
     }
 
     if (userInfoData.email) {

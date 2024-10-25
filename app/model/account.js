@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = app => {
-  const { STRING, INTEGER, JSON } = app.Sequelize;
+  const { STRING, INTEGER, JSON, ENUM } = app.Sequelize;
 
   const tbn = 'base_user_accounts';
   const Account = app.model.define(tbn, {
@@ -30,7 +30,9 @@ module.exports = app => {
       field: 'recent_login_history',
     },
     status: {
-      type: INTEGER,
+      type: ENUM('ACTIVE', 'BANNED', 'DELETED', 'PENDING', 'SUSPENDED', 'INACTIVE'),
+      allowNull: false,
+      defaultValue: 'PENDING',
       field: 'status',
     },
   }, {
