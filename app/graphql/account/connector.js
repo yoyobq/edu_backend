@@ -19,7 +19,6 @@ class AccountConnector {
   }
 
   async userByLoginEmail(loginEmail) {
-    console.log('finding account');
     const account = await this.service.findByLoginEmail(loginEmail);
     return account;
   }

@@ -25,8 +25,8 @@ input VerifEmailInput {
   applicantId: Int!
   # 发行者ID（响应申请的管理员）
   issuerId: Int!
-  # 验证码的有效期（毫秒）
-  expiryTime: Int
+  # 申请者的身份
+  role: String
 }
 
 # VerifCode 验证参数

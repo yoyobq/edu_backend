@@ -26,7 +26,7 @@ class VerificationConnector {
    * @param {String} params.email - 收件人的邮箱地址。
    * @param {Number} params.applicantId - 申请者ID。
    * @param {Number} params.issuerId - 发行者ID（响应申请的管理员）。
-   * @param {Number} params.expiryTime - 验证码的有效期（毫秒）。
+   * @param {Number} params.role - 申请者的身份。
    * @return {Promise<Boolean>} 返回邮件是否成功发送的布尔值。
    */
   async sendVerifEmail(params) {
@@ -71,13 +71,13 @@ class VerificationConnector {
       this.ctx.throw(`发送验证码邮件失败: ${error.message}`);
     }
 
-    // 发送验证码邮件，测试用，勿忘改回 email
-    // const result = await this.sendMailSrv.sendEmail(email, subject, content);
-    const result = await this.sendMailSrv.sendEmail('yoyobq@hotmail.com', subject, content);
+    // 下面注释掉的用于发送验证码邮件，测试用
+    // const result = await this.sendMailSrv.sendEmail('yoyobq@hotmail.com', subject, content);
+    const result = await this.sendMailSrv.sendEmail(email, subject, content);
 
-    // 测试用，勿忘改回 &&
-    if (result.accepted.includes(email) || result.response.startsWith('250')) {
-    // if (result.accepted.includes(email) && result.response.startsWith('250')) {
+    // 下面这条注释掉的 if 测试用，可以跳过邮箱检查
+    // if (result.accepted.includes(email) || result.response.startsWith('250')) {
+    if (result.accepted.includes(email) && result.response.startsWith('250')) {
       return true;
     }
 

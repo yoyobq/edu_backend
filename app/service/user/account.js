@@ -88,11 +88,6 @@ class Account extends Service {
     throw new Error('用户名密码错或账号不存在');
   }
 
-  async findWithCondition(condition) {
-    const account = await this.ctx.model.Account.findOne(condition);
-    return account;
-  }
-
   async findByLoginEmail(loginEmail) {
     const account = await this.ctx.model.Account.findOne({
       where: {
@@ -102,12 +97,6 @@ class Account extends Service {
     });
     return account;
   }
-  // 根据 schema 定义 account 和 updates 的结构应为
-  // {
-  //   loginName: 'username',
-  //   loginEmail: 'user@example.com',
-  //   loginPassword: 'password123',
-  // }
 
   /**
  * 根据传入的密码和盐值生成哈希字符串。
@@ -128,7 +117,7 @@ class Account extends Service {
     jobId,
     name,
   }) {
-    console.log('create:', loginPassword, loginEmail, loginName, nickname, jobId, name);
+    // console.log('create:', loginPassword, loginEmail, loginName, nickname, jobId, name);
     let transaction;
     try {
       transaction = await this.ctx.model.transaction();
@@ -207,20 +196,6 @@ class Account extends Service {
     return updatedAccount;
   }
 
-  async del(id) {
-    const user = await this.ctx.model.Account.findByPk(id);
-    if (!user) {
-      this.ctx.throw(404, 'Account not found');
-    }
-
-    // destory 也是
-    return user.destroy();
-  }
-
-  isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  }
 }
 
 module.exports = Account;
