@@ -99,10 +99,10 @@ class Account extends Service {
   }
 
   /**
- * 根据传入的密码和盐值生成哈希字符串。
- * @param {string} password - 用户的密码。
- * @param {string} salt - 用于加密的盐值。
- * @return {string} - 返回加密后的哈希字符串。
+   * 根据传入的密码和盐值生成哈希字符串。
+   * @param {string} password - 用户的密码。
+   * @param {string} salt - 用于加密的盐值。
+   * @return {string} - 返回加密后的哈希字符串。
  */
   hashPassword(password, salt) {
     const hash = crypto.pbkdf2Sync(password, salt, 5000, 64, 'sha256').toString('hex');
@@ -138,6 +138,7 @@ class Account extends Service {
 
       // 计算哈希密码
       const salt = newAccount.createdAt.toString();
+      // console.log(newAccount.loginPassword, salt);
       const hashedPassword = await this.hashPassword(newAccount.loginPassword, salt);
       // 更新账户记录中的密码字段
       newAccount.loginPassword = hashedPassword;
@@ -182,6 +183,7 @@ class Account extends Service {
     } catch (error) {
       // 如果发生错误，回滚事务
       if (transaction) await transaction.rollback();
+      console.error('新增用户失败:', error);
       throw error;
     }
   }
@@ -196,6 +198,61 @@ class Account extends Service {
     return updatedAccount;
   }
 
+  /**
+   * 根据验证字符串找到用户并修改用户密码。
+   * @param {object} params - 重置密码的参数对象。
+   * @param {string} params.newPassword - 用户的新密码。
+   * @param {string} params.verifCode - 用于确认操作是否合法及用户身份的验证字符串。
+   * @return {boolean} - 返回修改密码是否成功的结果。
+ */
+  async userResetPassword({ verifCode, newPassword }) {
+    let transaction;
+
+    try {
+      transaction = await this.ctx.model.transaction();
+      const verifCodeRecord = await this.ctx.service.common.verifCode.validateVerifCode(verifCode);
+
+      if (!verifCodeRecord) {
+        return false;
+      }
+
+      const account = await this.ctx.model.Account.findOne({
+        where: { loginEmail: verifCodeRecord.data.email },
+      });
+
+      if (!account.id) {
+        return false;
+      }
+
+      // 在事务中进行 `save` 操作
+      const salt = account.createdAt.toString();
+      const hashedPassword = await this.hashPassword(newPassword, salt);
+
+      account.loginPassword = hashedPassword;
+      const saved = await account.save({ transaction });
+      // console.log(saved);
+      if (!saved) {
+        return false;
+      }
+
+      // 在事务中进行 `destroy` 操作
+      const deleted = await verifCodeRecord.destroy({ transaction });
+      if (!deleted) {
+        console.log('11111');
+        return false;
+      }
+
+      // 提交事务
+      await transaction.commit();
+      // 如果事务完成，返回 true 表示成功
+      return true;
+    } catch (error) {
+      // 如果事务中任何一步失败，都会进入此 catch 语句
+      if (transaction) await transaction.rollback();
+      console.error('密码更新事务执行失败:', error);
+      return false;
+    }
+  }
 }
 
 module.exports = Account;

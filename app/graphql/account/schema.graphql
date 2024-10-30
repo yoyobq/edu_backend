@@ -53,6 +53,8 @@ input LoginParams {
   type: String
 }
 
+
+
 # # 修改参数
 # input UpdateParams {
 #   # 用户 ID
@@ -79,15 +81,21 @@ input LoginParams {
 #   jobId: Int!
 # }
 
-
+# 用户 resetPassword 时的查询参数
+input ResetPasswordInput {
+  # 验证字符串
+  verifCode: String!
+  # 新密码
+  newPassword: String!
+}  
 
 # 修改结果
-# extend type Mutation {
+extend type Mutation {
   # 修改用户账户信息
   # updateAccount(params: UpdateParams!): Account
-  # 插入新的用户账户信息
-  # insertAccount(params: InsertParams!): Account
-# } 
+  # 重置用户密码
+  userResetPassword(input: ResetPasswordInput!): Boolean
+} 
 
 # 查询结果
 extend type Query {

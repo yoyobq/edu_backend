@@ -54,9 +54,9 @@ class VerificationConnector {
         // 处理密码重置类型的验证码
           subject = '密码重置';
           content = `
-            您可以通过以下链接重置密码：
-            http://192.168.72.55/resetpwd/${verificationCode}
-            请点击该链接重置密码`;
+            您可以在接入学院内网的前提下通过以下链接重置密码：
+            http://192.168.72.55/user/reset-password/${verificationCode}
+            点击重置`;
           break;
 
 

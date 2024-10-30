@@ -22,6 +22,11 @@ class AccountConnector {
     const account = await this.service.findByLoginEmail(loginEmail);
     return account;
   }
+
+  async userResetPassword(input) {
+    const result = await this.service.userResetPassword(input);
+    return result;
+  }
 }
 
 module.exports = AccountConnector;

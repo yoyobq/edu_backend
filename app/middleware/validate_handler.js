@@ -51,8 +51,8 @@ module.exports = (_, app) => {
       if (ctx.url === '/graphql/login' || ctx.url === '/graphql/register') {
         // 当前台提交登录请求时，不检查 header 里的 cookie，
         // 但要检查发起请求的网页是否是 /user/login 否则不予登录
-        console.log('登录或注册时不验证 token');
-        if (path === '/user/login') {
+        console.log('登录、注册、重置密码时不验证 token');
+        if (path === '/user/login' || /^\/user\/reset-password\/[^/]+$/.test(path)) {
           ctx.request.url = ('/graphql');
         } else {
           ctx.body = {

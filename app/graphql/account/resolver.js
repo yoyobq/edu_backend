@@ -67,15 +67,11 @@ module.exports = {
     // },
   },
 
-  // Mutation: {
-  //   updateAccount: (_, { params }, ctx) => {
-  //     return ctx.connector.account.update(params);
-  //   },
-
-  //   insertAccount: (_, { params }, ctx) => {
-  //     return ctx.connector.account.insert(params);
-  //   },
-  // },
+  Mutation: {
+    userResetPassword: (_, { input }, ctx) => {
+      return ctx.connector.account.userResetPassword(input);
+    },
+  },
 
   DateTime: DateTimeResolver,
 };
