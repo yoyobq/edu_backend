@@ -49,27 +49,39 @@ class Account extends Service {
       loginAccount = {
         where: {
           loginEmail: loginName,
-          loginPassword,
         },
-        attributes: [ 'id', 'status' ],
+        attributes: [ 'id', 'status', 'createdAt', 'loginPassword' ],
       };
     } else {
       loginAccount = {
         where: {
           loginName,
-          loginPassword,
         },
-        attributes: [ 'id', 'status' ],
+        attributes: [ 'id', 'status', 'createdAt', 'loginPassword' ],
       };
     }
 
-    const account = await this.findWithCondition(loginAccount);
+    const account = await this.ctx.model.Account.findOne(loginAccount);
+
     let token;
     if (account) {
+      const salt = account.createdAt.toString();
+      const hashedPassword = await this.hashPassword(loginPassword, salt);
+
+      if (hashedPassword !== account.loginPassword) {
+        throw new Error('用户名密码错或账号不存在');
+      }
+
       switch (account.dataValues.status) {
         case 'ACTIVE':
           token = await this.ctx.service.auth.token.create(account);
-          return { account, token };
+          return {
+            account: {
+              id: account.id,
+              status: account.status,
+            },
+            token,
+          };
         case 'BANNED':
           throw new Error('此账号封禁中，请联系管理员');
         case 'DELETED':
@@ -238,7 +250,6 @@ class Account extends Service {
       // 在事务中进行 `destroy` 操作
       const deleted = await verifCodeRecord.destroy({ transaction });
       if (!deleted) {
-        console.log('11111');
         return false;
       }
 
