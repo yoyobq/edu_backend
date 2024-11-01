@@ -7,6 +7,8 @@
 // 3 run dev 的时候，能在后台即时输出运行的状态，方便debug
 'use strict';
 
+// const { EggConsoleLogger } = require('egg-logger');
+
 module.exports = () => {
   return async function graphqlResponseHandler(ctx, next) {
     let isGqlQuery = false;
@@ -47,7 +49,6 @@ module.exports = () => {
         //   traceId?: string; // 便于后端故障排查的唯一请求 ID
         //   host?: string; // 便于后端故障排查的当前访问服务器的主机
         // }
-
         const response = JSON.parse(ctx.body);
         // console.log(response);
         // 在控制台输出错误
@@ -57,7 +58,6 @@ module.exports = () => {
           // console.log(response.errors[0].extensions.code);
         }
         const success = !response.errors;
-
         // 重新封装 graphql 的信息，如有错误，则增加 error，方便前端统一处理
         ctx.body = {
           success,

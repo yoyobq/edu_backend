@@ -134,18 +134,19 @@ module.exports = (_, app) => {
           const payload = app.jwt.verify(token, secret);
           // 获取包含在 header 里的真实远程地址，
           // 如果是开发环境没有远程地址，则给一个事先放在 token 里的，明显错误的本地地址用做识别。
-          const remoteAddr = ctx.headers['x-real-ip'] || '192.168.72.256';
+          // const remoteAddr = ctx.headers['x-real-ip'] || ctx.ip || '192.168.72.256';
 
-          if (payload.loginAddr !== remoteAddr) {
-            console.log(`${remoteAddr} 正在试图使用用 ${payload.loginAddr} 的 token 登录`);
-            ctx.body = {
-              success: false,
-              errorCode: 1001,
-              errorMessage: '非法登录，自重！',
-              // showType: 0,
-              host: ctx.request.header.host,
-            };
-          }
+          // if (payload.loginAddr !== remoteAddr) {
+          //   console.log(`${remoteAddr} 正在试图使用用 ${payload.loginAddr} 的 token 登录`);
+          //   ctx.body = {
+          //     success: false,
+          //     errorCode: 1001,
+          //     errorMessage: '非法登录，自重！',
+          //     // showType: 0,
+          //     host: ctx.request.header.host,
+          //   };
+          //   return;
+          // }
 
           console.log(`来自 ${path} 的 token 验证通过`);
 
