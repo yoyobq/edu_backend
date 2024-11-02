@@ -92,12 +92,20 @@ class MyLoginService extends Service {
         console.log('token:', data.data.token, '登录成功');
         // 这是一个正确的 session
         //  JSESSIONID_A=PAUvuZrwO1bvH7dI9LGB1k6xHxXu566i4be4vodC.ecs-b00c-0004
+
+        const userInfo = await this.getUserInfoSSTS({
+          token: data.data.token,
+          JSESSIONID_A: jsessionId,
+        });
+
         // 根据 graphql 接口定义返回有效数据以便后续使用
         const sstsLoginResponse = {
           success: true,
           cookie: data.data,
           jsessionCookie,
+          userInfo,
         };
+
         return sstsLoginResponse;
       }
 
@@ -110,6 +118,58 @@ class MyLoginService extends Service {
       throw error;
     }
   }
+
+  /**
+   * 获取用户信息请求
+   * @param {object} params - 包含所有参数的对象。
+   * @param {string} params.token - Bearer Token
+   * @param {string} params.JSESSIONID_A - JSESSIONID_A Cookie
+   * @return {Promise<object>} - 返回原始响应数据
+   */
+  async getUserInfoSSTS({ token, JSESSIONID_A }) {
+    try {
+      // 定义获取用户信息的 URL 和请求头
+      const winTemp = `${Math.floor(Math.random() * 100000)}.${(Math.random()).toFixed(13).slice(2)}`;
+      const userInfoUrl = `http://2.46.215.2:18000/jgyx-ui/jgyx/frame/systemmanagement/usermanagement/user/usermanagement.action?frameControlSubmitFunction=getUserInfo&winTemp=${winTemp}`;
+
+      // 设定请求头
+      const headers = {
+        Accept: 'application/json, text/plain, */*',
+        'Accept-Encoding': 'gzip, deflate',
+        'Accept-Language': 'en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5',
+        Authorization: `Bearer ${token}`,
+        'Content-Length': '24',
+        'Content-Type': 'application/json;charset=UTF-8',
+        Cookie: `SzmeSite=None; JSESSIONID_A=${JSESSIONID_A}`,
+        DNT: '1',
+        Host: '2.46.215.2:18000',
+        Origin: 'http://2.46.215.2:18000',
+        'Proxy-Connection': 'keep-alive',
+        Referer: 'http://2.46.215.2:18000/jgyx-ui/login',
+        'Service-Type': 'Microservices',
+        'User-Agent': this.ctx.request.headers['user-agent'],
+      };
+
+      const payload = 'gnTbJES+r4H6qtFUmlSzpw==';
+
+      // 发送请求
+      const response = await this.ctx.curl(userInfoUrl, {
+        method: 'POST',
+        headers, // 设置请求头
+        data: payload, // 请求体内容
+        dataType: 'json', // 设置返回数据类型为 JSON
+        withCredentials: true, // 发送凭证（Cookie）
+      });
+
+      const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
+
+      return data.data;
+    } catch (error) {
+      this.ctx.logger.error('获取用户信息请求失败:', error.message);
+      throw error;
+    }
+  }
+
 }
 
 module.exports = MyLoginService;
