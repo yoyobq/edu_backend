@@ -7,5 +7,10 @@ module.exports = {
       const res = await ctx.connector.sstsSpider.login(input);
       return res;
     },
+
+    sstsGetCurriPlan: async (_, { input }, ctx) => {
+      const res = await ctx.connector.sstsSpider.getCurriPlan(input);
+      return res;
+    },
   },
 };

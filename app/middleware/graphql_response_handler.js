@@ -49,6 +49,7 @@ module.exports = () => {
         //   traceId?: string; // 便于后端故障排查的唯一请求 ID
         //   host?: string; // 便于后端故障排查的当前访问服务器的主机
         // }
+        // console.log(ctx.body);
         const response = JSON.parse(ctx.body);
         // console.log(response);
         // 在控制台输出错误

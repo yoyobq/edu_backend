@@ -23,13 +23,13 @@ describe('service/common/sstsCipher.test.js', () => {
   });
 
   it('测试 encryptData() 方法正确加密输入字符串', async () => {
-    const password = 'alex2alex';
+    const password = '123456';
     const plainTextData = {
       grant_type: 'password',
       username: {
         loginType: '',
-        userId: '2226',
-        userName: '2226',
+        userId: '2227',
+        userName: '2227',
         loginMethod: '0',
         extUserId: [],
       },
@@ -44,7 +44,7 @@ describe('service/common/sstsCipher.test.js', () => {
   });
 
   it('测试 decrypt() 方法能够还原加密内容', async () => {
-    const password = 'alex2alex';
+    const password = '123456';
     const plainTextData = {
       grant_type: 'password',
       username: {

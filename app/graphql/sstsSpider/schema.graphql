@@ -17,6 +17,13 @@ type SstsLoginResponse {
   userInfo: JSON # 获取的 userInfo 
 }
 
+# 输入保留的会话信息 
+input SstsSessionInfo {
+  JSESSIONID_A: String!
+  token: String!
+  refreshToken: String!
+}
+
 # 查询类型定义
 extend type Query {
   """
@@ -24,4 +31,5 @@ extend type Query {
   传递用户ID和密码，并返回登录状态及 Cookie。
   """
   sstsLogin(input: SstsLoginInput!): SstsLoginResponse!     # 返回登录结果和 Cookie
+  sstsGetCurriPlan(input: SstsSessionInfo!): JSON!
 }
