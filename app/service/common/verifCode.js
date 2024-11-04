@@ -24,8 +24,6 @@
 
 const crypto = require('crypto');
 const { Op } = require('sequelize');
-// eslint-disable-next-line no-unused-vars
-const { EggConsoleLogger } = require('egg-logger');
 const Service = require('egg').Service;
 
 class VerifCode extends Service {

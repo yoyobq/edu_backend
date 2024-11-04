@@ -153,7 +153,7 @@ module.exports = (_, app) => {
           // 将解码后的 payload 数据保存到 ctx.state.user 属性中
           ctx.state.user = payload;
         } catch (err) {
-          console.log(err);
+          // console.log(err);
           ctx.body = {
             success: false,
             errorCode: 1001,

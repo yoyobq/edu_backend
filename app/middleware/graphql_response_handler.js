@@ -1,78 +1,104 @@
-// app/middleware/graphql_error_handler.js
-// 这个自己写的中间件是为了解决2个问题
-// 1 egg-graphql 的 /graphql 不只是数据查询接口，还是自带的 graphql语句查询网页访问地址，
-//   因此，访问 /graphql 地址以后反馈的未必是数据信息，也可能是一张网页信息，需要想办法加以区分
-// 2 来自前端的外部查询，需要重新封装 /graphql 这个接口，更好的反馈数据，方便前端获取
-// 除此以外，顺带提供了一个小功能，
-// 3 run dev 的时候，能在后台即时输出运行的状态，方便debug
 'use strict';
 
-// const { EggConsoleLogger } = require('egg-logger');
+/**
+ * @file graphql_error_handler.js
+ * @description Egg.js 中间件，用于处理 GraphQL 请求响应。主要解决以下问题：
+ *
+ * 1. 区分普通 GraphQL 数据查询请求与 GraphiQL 查询页面访问请求，
+ *    并确保仅在 GraphQL 查询请求中进行自定义响应封装。
+ * 2. 为来自前端的外部 GraphQL 查询请求提供标准化的响应结构，便于前端统一处理。
+ * 3. 在开发模式中输出运行日志，便于实时监控和调试。
+ *
+ * 功能概述：
+ * - 通过判断请求路径和响应内容类型来识别 GraphQL 请求。
+ * - 封装 GraphQL 响应，增加 success、data、errorCode 等标准化字段，符合 Ant Design Pro 建议的格式。
+ * - 在非生产环境下输出详细的日志信息，便于调试。
+ * - 使用 ctx.logger 在生产环境中记录错误信息。
+ *
+ * 日志输出：
+ * - 在非生产环境下，控制台输出检测到的 GraphQL 查询和可能的错误信息。
+ * - 在生产环境下，错误信息通过 ctx.logger 记录。
+ *
+ * @module middleware/graphql_error_handler
+ */
 
 module.exports = () => {
   return async function graphqlResponseHandler(ctx, next) {
     let isGqlQuery = false;
+    // 判断是否在生产环境
+    const isProduction = process.env.NODE_ENV === 'production';
 
-    // 获取访问源地址，说明不是响应查询，而是用于读取 egg-graphql 提供的查询网页
-    const origin = ctx.request.header.origin;
-    if (origin !== undefined || ctx.response.header['content-type'] !== 'text/html') {
-      // 满足条件是一次查询，否则就是一张网页（不要对数据做处理）
-      // console.log('发起了一次q/m');
-      // Host 请求头指明了请求将要发送到的服务器主机名和端口号
-      // const host = ctx.request.header.host;
-      // 数据发送到;
-      // console.log(host);
-      // 数据来自于;
-      // console.log(origin);
+    // 判断是否是 GraphQL 查询请求，判断1 是否包含约定的 /grpahql 字符
+    const isGraphqlPath = ctx.request.url.includes('/graphql');
+    // 判断2 正常 grapqhl 都是 json
+    const isJsonContent = ctx.request.header['content-type']?.includes('application/json');
 
-      // referer 代表发出当前请求的 URL
-      const referer = ctx.request.header.referer;
+    if (isGraphqlPath && isJsonContent) {
+      // 符合 GraphQL 查询的路径和内容类型，表明这是一次 GraphQL 数据请求
+      isGqlQuery = true;
+      if (!isProduction) {
+        const currentTime = new Date().toLocaleTimeString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' });
+        console.log(`[${currentTime}]-------检测到外部发起的 GraphQL 查询-------`);
+      } else {
+        ctx.logger.info(`GraphQL 请求发起自: ${ctx.request.header.referer || ctx.request.header.origin}`);
+      }
+    }
 
-      // 如果没有 referer，说明是在浏览器访问 GrqphiQL 查询页面
-      // 如果查询页面后缀是 /graphql 说明就是在 GraphiQL 页面中查询，无需手动处理，
-      if (referer !== undefined && !referer.endsWith('/graphql')) {
-        isGqlQuery = true;
-        console.log('-------检测到外部发起的 Graphql 查询-------');
-        console.log('访问发起自:' + referer);
+    await next();
+    if (isGqlQuery) {
+      const response = JSON.parse(ctx.body);
+      // console.log(response);
+      // 在控制台输出错误，并记录到日志
+      if (response.errors) {
+        // 生成标准结构的错误信息
+        const errorCode = response.errors[0].extensions.code;
+        const errorMessage = response.errors[0].message;
+        const queryInfo = {
+          method: ctx.request.method,
+          query: ctx.request.body.query,
+          variables: ctx.request.body.variables,
+          url: ctx.request.url,
+          referer: ctx.request.header.referer || ctx.request.header.origin,
+        };
+
+        const errInfo = {
+          errorCode,
+          errorMessage,
+          queryInfo,
+        };
+
+        if (!isProduction) {
+          const currentTime = new Date().toLocaleTimeString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' });
+          console.log(`[${currentTime}]------- Graphql 异常处理信息 -------`);
+        }
+        ctx.logger.error('GraphQL 错误', errInfo);
       }
 
-      await next();
+      const success = !response.errors;
+      // 重新封装 graphql 的信息，如有错误，则增加 error，方便前端统一处理
+      ctx.body = {
+        success,
+        data: response.data,
+        errorCode: response.errors ? response.errors[0].extensions.code : undefined,
+        errorMessage: response.errors ? response.errors[0].message : undefined,
+        showType: response.errors ? 0 : undefined,
+        // traceId: 2333,
+        host: ctx.request.header.host,
+      };
+      // antd pro 建议后台反馈数据的结构
+      // export interface response {
+      //   success: boolean; // 如果请求成功则为 true
+      //   data?: any; // 响应数据
+      //   errorCode?: string; // 错误类型的代码
+      //   errorMessage?: string; // 显示给用户的错误信息
+      //   showType?: number; // 错误显示类型：0 静默，1 message.warn，2 message.error，4 notification，9 page
+      //   traceId?: string; // 便于后端故障排查的唯一请求 ID
+      //   host?: string; // 便于后端故障排查的当前访问服务器的主机
+      // }
+      // 默认的接口反馈形式是 body { data:{}, errors {} } 感觉这种形式也不错，
 
-      if (isGqlQuery) {
-        // antd pro 建议后台反馈数据的结构
-        // export interface response {
-        //   success: boolean; // 如果请求成功则为 true
-        //   data?: any; // 响应数据
-        //   errorCode?: string; // 错误类型的代码
-        //   errorMessage?: string; // 显示给用户的错误信息
-        //   showType?: number; // 错误显示类型：0 静默，1 message.warn，2 message.error，4 notification，9 page
-        //   traceId?: string; // 便于后端故障排查的唯一请求 ID
-        //   host?: string; // 便于后端故障排查的当前访问服务器的主机
-        // }
-        // console.log(ctx.body);
-        const response = JSON.parse(ctx.body);
-        // console.log(response);
-        // 在控制台输出错误
-        if (response.errors) {
-          console.log('------- Graphql 异常处理信息 -------');
-          console.log(response);
-          // console.log(response.errors[0].extensions.code);
-        }
-        const success = !response.errors;
-        // 重新封装 graphql 的信息，如有错误，则增加 error，方便前端统一处理
-        ctx.body = {
-          success,
-          data: response.data,
-          errorCode: response.errors ? response.errors[0].extensions.code : undefined,
-          errorMessage: response.errors ? response.errors[0].message : undefined,
-          showType: response.errors ? 0 : undefined,
-          // traceId: 2333,
-          host: ctx.request.header.host,
-        };
-        // 默认的接口反馈形式是 body { data:{}, errors {} } 感觉这种形式也不错，
-
-        // console.log(ctx.body);
-        console.log('------- Graphql 查询处理完成 -------\n');
+      if (!isProduction) {
+        console.log('------- Graphql 查询处理完成 -------');
       }
     }
   };
