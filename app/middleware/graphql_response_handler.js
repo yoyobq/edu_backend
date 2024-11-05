@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * @file graphql_error_handler.js
+ * @file graphql_response_handler.js
  * @description Egg.js 中间件，用于处理 GraphQL 请求响应。主要解决以下问题：
  *
  * 1. 区分普通 GraphQL 数据查询请求与 GraphiQL 查询页面访问请求，
@@ -19,7 +19,7 @@
  * - 在非生产环境下，控制台输出检测到的 GraphQL 查询和可能的错误信息。
  * - 在生产环境下，错误信息通过 ctx.logger 记录。
  *
- * @module middleware/graphql_error_handler
+ * @module middleware/graphql_response_handler
  */
 
 module.exports = () => {

@@ -22,6 +22,7 @@ input SstsSessionInfo {
   JSESSIONID_A: String!
   token: String!
   refreshToken: String!
+  userId: String!
 }
 
 # 查询类型定义

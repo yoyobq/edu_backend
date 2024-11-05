@@ -25,8 +25,8 @@ class SstsSpiderConnector {
     return response;
   }
 
-  async getCurriPlan({ JSESSIONID_A, token, refreshToken }) {
-    const response = await this.ctx.service.mySSTS.myCurriPlan.getCurriPlanSSTS({ JSESSIONID_A, token, refreshToken });
+  async getCurriPlan({ JSESSIONID_A, token, refreshToken, userId }) {
+    const response = await this.ctx.service.mySSTS.myCurriPlan.getCurriPlanSSTS({ JSESSIONID_A, token, refreshToken, userId });
     return response;
   }
 }
