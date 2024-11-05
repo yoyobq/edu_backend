@@ -31,8 +31,8 @@ module.exports = {
     package: 'egg-passport-local',
   },
 
-  jwt: {
-    enable: true,
-    package: 'egg-jwt',
-  },
+  // jwt: {
+  //   enable: true,
+  //   package: 'egg-jwt',
+  // },
 };

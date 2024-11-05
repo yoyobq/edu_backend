@@ -135,3 +135,32 @@ class MyCurriPlanService extends Service {
 }
 
 module.exports = MyCurriPlanService;
+
+
+// http://2.46.215.2:18000/jgyx-ui/jgyx/frame/component/pagegrid/pagegrid.action?frameControlSubmitFunction=query&winTemp=Q_EA_Lecture_Plan_Detail72daf2547.619326426913
+
+// accept: text/plain, */*; q=0.01
+// accept-encoding:
+// gzip, deflate
+// accept-language:
+// en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5
+// content-length:
+// 280
+// content-type:
+// application/json; charset=UTF-8
+// cookie:
+// SzmeSite=None; SzmeSite=None; JSESSIONID_A=WHQNpuR1qnh2Eb-f1IFhyiaKxDC5hB9Fe0mfU5b5.ecs-b00c-0004
+// dnt:
+// 1
+// host:
+// 2.46.215.2:18000
+// origin:
+// http://2.46.215.2:18000
+// proxy-connection:
+// keep-alive
+// referer:
+// http://2.46.215.2:18000/jgyx-ui/CMU09/CMU090101/index?lecture_plan_id=40349a5691c17ed70191c4d401ed03b2&course_category=1&course_name=1031114G%E4%BF%A1%E6%81%AF%E6%A3%80%E7%B4%A2&class_name=%E4%BF%A1%E6%81%AF2404%E7%8F%AD,%E4%BF%A1%E6%81%AF2405%E7%8F%AD&teacher_name=%E5%8D%9C%E5%BC%BA&course_class=1
+// user-agent:
+// Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0
+
+// hTcOK7xIDf4AKm1YZzIgjScs91EN0Ry5DOLrTDVQleiMycZKiOcymG85digViykkHomhpIW4gbmG1VinPEOZcXZtY/A0LK2HhXavtYK2YkuHvystdNj1waqoWVZr+Kq38WHNYaAaZK4cPY1nCpDht0YaAu2o+wQgVwHhKGe3f+aJc1zd30bVmW2WFio9fuivKlbbISQlVfgBhtGDCCQ0SvYpAIQrrVRCEI8Ef4O58kmXke3ilrrigL5xjII6tOmVxmgFewV68aFKq1t3fjLETg==

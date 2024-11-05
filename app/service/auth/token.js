@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+const jwt = require('jsonwebtoken'); // 引入 jsonwebtoken
 
 /**
  *  用于完成前后端的鉴权
@@ -33,25 +34,27 @@ class Token extends Service {
     //   isNewRecord: false
     // }
 
-    // console.log(account.dataValues);
-
+    const userIp = this.ctx.headers['x-forwarded-for'] || this.ctx.headers['x-real-ip'] || this.ctx.ip;
+    console.log('remoteddr:', userIp);
     const remoteAddr = this.ctx.headers['x-real-ip'] || '192.168.72.256';
 
-    // 利用 egg-jwt 生成 token
-    const token = this.app.jwt.sign({
+    // 利用 jswebtoken 生成 token
+    const token = jwt.sign({
       // 载荷信息
       // {
       //   id: 2,
-      //   status: 1,
-      //   loginAddr: '192.168.72.256', // dev 下给的错误 IP，方便识别
-      //   iat: 1681094553,
-      //   exp: 1681180953
+      //   status: 'ACTIVE',
+      //   createdAt: '2023-03-15T01:06:50.000Z',
+      //   loginPassword: '2823b13ece6ad1b6dd897a37bfa092b3e7379ef350e54f8bd8c12171e21c35fb5ea0d371812a0281a9d1106a871aa3f5249479e16d2eca3edda1af0a515774f5',
+      //   loginAddr: '192.168.72.256',
+      //   iat: 1730824871,
+      //   exp: 1730857271
       // }
       ...account.dataValues,
       loginAddr: remoteAddr,
-    }, this.app.config.jwt.secret, { expiresIn: this.app.config.jwt.expiresIn });
+    }, this.app.config.jwt.jwtSecret, { expiresIn: this.app.config.jwt.expiresIn });
 
-    // console.log(this.app.jwt.decode(token));
+    // console.log(jwt.decode(token));
     return token;
   }
 }

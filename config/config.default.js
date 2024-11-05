@@ -99,13 +99,19 @@ module.exports = appInfo => {
       },
     },
 
+    // jsonwebtoken 的必要变量
+    jwt: {
+      jwtSecret: 'process.env.APP_JWT_SECRET',
+      expiresIn: '9h', // 设置 token 过期时间，可调整为适合的值
+    },
+
     // 选用 egg-jwt 处理 token 的初衷是方便直接在路由里写验证，
     // 但实际使用后发现由于 graphql 的存在，很不方便，准备转 jsonwebtoken，
     // 此处暂保留 egg-jwt 的方式，有时间来改
-    jwt: {
-      secret: process.env.APP_JWT_SECRET || 'temp_secret_key',
-      expiresIn: '12h',
-    },
+    // jwt: {
+    //   secret: process.env.APP_JWT_SECRET || 'temp_secret_key',
+    //   expiresIn: '12h',
+    // },
     // 通过 app.jwt.sign() 方法来签名生成 JWT，app.jwt.verify() 方法来验证 JWT，
     // 并使用 ctx.request.header.authorization 获取请求头中的 JWT。
     // 最后，在路由中定义相应的接口地址，用于测试 JWT 的生成和验证功能。

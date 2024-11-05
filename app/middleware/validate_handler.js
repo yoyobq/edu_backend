@@ -86,79 +86,79 @@ module.exports = (_, app) => {
         ctx.request.url = ('/graphql');
       } else {
         console.log(`来自 ${path} 需要验证 token`);
-        try {
-          // 当前台提交其他请求时，获取请求 header 中的验证字符串
-          // 实例: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Miwic3RhdHVzIjoxLCJsb2dpbkFkZHIiOiIxOTIuMTY4LjcyLjI1NiIsImlhdCI6MTY4MTE0MTUxOCwiZXhwIjoxNjgxMjI3OTE4fQ.AKUzLa1az9vlkH0p3PB8cyHDMS39ZCD9bfX_B5AVtxU"
-          // const authorization = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ';
-          const authorization = ctx.header.authorization;
+        const secret = app.config.jwt.jwtSecret;
+        const result = ctx.helper.verifyToken(ctx.header.authorization, secret);
 
-          if (!authorization) {
-            // throw new Error('请勿随意爬取数据');
-            // 也可以 throw 一个错误对象，但 new 对象开销太大，所以沿用 ctx.body 的方式返回错误
-            ctx.body = {
-              success: false,
-              errorCode: 1001,
-              errorMessage: '非法登录，自重',
-            };
-            return;
-          }
-
-          // 拆分以逗号为间隔的字符串，验证格式并提取token
-          const parts = authorization.split(' ');
-          if (parts.length !== 2 || !/^Bearer$/i.test(parts[0])) {
-            // ctx.status = 401;
-            ctx.body = {
-              success: false,
-              errorCode: 1001,
-              errorMessage: '非法登录，自重。',
-            };
-            return;
-          }
-
-          const token = parts[1];
-          // 由于 jwt.verify 会主动抛出异常，所以这里用 try catch来处理 token 的验证
-          // 验证 JWT Token
-          const secret = app.config.jwt.secret;
-          // 验证失败则抛出异常，成功则返回 decode 后的 payload：
-          // {
-          //   id: 2,
-          //   status: 1,
-          //   loginAddr: '192.168.72.256',
-          //   iat: 1681405728,
-          //   exp: 1681492128
-          // }
-          const payload = app.jwt.verify(token, secret);
-          // 获取包含在 header 里的真实远程地址，
-          // 如果是开发环境没有远程地址，则给一个事先放在 token 里的，明显错误的本地地址用做识别。
-          // const remoteAddr = ctx.headers['x-real-ip'] || ctx.ip || '192.168.72.256';
-
-          // if (payload.loginAddr !== remoteAddr) {
-          //   console.log(`${remoteAddr} 正在试图使用用 ${payload.loginAddr} 的 token 登录`);
-          //   ctx.body = {
-          //     success: false,
-          //     errorCode: 1001,
-          //     errorMessage: '非法登录，自重！',
-          //     // showType: 0,
-          //     host: ctx.request.header.host,
-          //   };
-          //   return;
-          // }
-
-          console.log(`来自 ${path} 的 token 验证通过`);
-
-          // 将解码后的 payload 数据保存到 ctx.state.user 属性中
-          ctx.state.user = payload;
-        } catch (err) {
-          // console.log(err);
+        if (!result.success) {
           ctx.body = {
             success: false,
-            errorCode: 1001,
-            errorMessage: '非法登录或 token 过期',
-            // showType: 0,
-            host: ctx.request.header.host,
+            errorCode: 400,
+            errorMessage: result.errorMessage,
           };
           return;
         }
+        // try {
+        //   // 当前台提交其他请求时，获取请求 header 中的验证字符串
+        //   // 实例: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Miwic3RhdHVzIjoxLCJsb2dpbkFkZHIiOiIxOTIuMTY4LjcyLjI1NiIsImlhdCI6MTY4MTE0MTUxOCwiZXhwIjoxNjgxMjI3OTE4fQ.AKUzLa1az9vlkH0p3PB8cyHDMS39ZCD9bfX_B5AVtxU"
+        //   // const authorization = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ';
+        //   const authorization = ctx.header.authorization;
+
+        //   if (!authorization) {
+        //     // throw new Error('请勿随意爬取数据');
+        //     // 也可以 throw 一个错误对象，但 new 对象开销太大，所以沿用 ctx.body 的方式返回错误
+        //     ctx.body = {
+        //       success: false,
+        //       errorCode: 1001,
+        //       errorMessage: '非法登录，自重',
+        //     };
+        //     return;
+        //   }
+
+        //   // 拆分以逗号为间隔的字符串，验证格式并提取token
+        //   const parts = authorization.split(' ');
+        //   if (parts.length !== 2 || !/^Bearer$/i.test(parts[0])) {
+        //     // ctx.status = 401;
+        //     ctx.body = {
+        //       success: false,
+        //       errorCode: 1001,
+        //       errorMessage: '非法登录，自重。',
+        //     };
+        //     return;
+        //   }
+
+        //   const token = parts[1];
+        //   // 由于 jwt.verify 会主动抛出异常，所以这里用 try catch来处理 token 的验证
+        //   // 验证 JWT Token
+        //   const secret = app.config.jwt.secret;
+        //   // 验证失败则抛出异常，成功则返回 decode 后的 payload：
+        //   // {
+        //   //   id: 2,
+        //   //   status: 1,
+        //   //   loginAddr: '192.168.72.256',
+        //   //   iat: 1681405728,
+        //   //   exp: 1681492128
+        //   // }
+        //   const payload = app.jwt.verify(token, secret);
+        //   // 获取包含在 header 里的真实远程地址，
+        //   // 如果是开发环境没有远程地址，则给一个事先放在 token 里的，明显错误的本地地址用做识别。
+        //   // const remoteAddr = ctx.headers['x-real-ip'] || ctx.ip || '192.168.72.256';
+
+        //   // if (payload.loginAddr !== remoteAddr) {
+        //   //   console.log(`${remoteAddr} 正在试图使用用 ${payload.loginAddr} 的 token 登录`);
+        //   //   ctx.body = {
+        //   //     success: false,
+        //   //     errorCode: 1001,
+        //   //     errorMessage: '非法登录，自重！',
+        //   //     // showType: 0,
+        //   //     host: ctx.request.header.host,
+        //   //   };
+        //   //   return;
+        // }
+
+        console.log(`来自 ${path} 的 token 验证通过`);
+
+        // 将解码后的 payload 数据保存到 ctx.state.user 属性中
+        ctx.state.user = result.payload;
       }
     }
 
