@@ -22,7 +22,7 @@
  * @module service/common/verifCode
  */
 
-const crypto = require('crypto');
+const CryptoJS = require('crypto-js');
 const { Op } = require('sequelize');
 const Service = require('egg').Service;
 
@@ -61,7 +61,7 @@ class VerifCode extends Service {
    */
   async genVerifCode(applicantType, data, applicantId, issuerId, expiryTime) {
     // 生成盐
-    const salt = crypto.randomBytes(8).toString('hex');
+    const salt = CryptoJS.lib.WordArray.random(8).toString(CryptoJS.enc.Hex);
     // 计算过期时间
     const expiry = Date.now() + expiryTime;
     // 生成 hash 字符串
@@ -235,7 +235,7 @@ class VerifCode extends Service {
  */
   generateHashStr(applicantType, applicantId, issuerId, salt) {
     const data = JSON.stringify({ applicantType, applicantId, issuerId });
-    const hashStr = crypto.createHmac('sha256', salt).update(data).digest('hex');
+    const hashStr = CryptoJS.HmacSHA256(data, salt).toString(CryptoJS.enc.Hex);
 
     return hashStr;
   }

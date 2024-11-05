@@ -45,8 +45,13 @@ class MyLoginService extends Service {
         },
       };
 
+      console.log('here');
+
       // 登录请求的负载数据
       const payload = await this.ctx.service.common.sstsCipher.encryptData(password, plainTextData);
+      console.log(typeof payload);
+      console.log(payload);
+      console.log(payload.length);
 
       const response = await this.ctx.curl(loginUrlCurl, {
         method: 'POST',

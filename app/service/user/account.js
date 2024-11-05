@@ -1,7 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
-const crypto = require('crypto');
+const CryptoJS = require('crypto-js');
 
 /** 23-3-18 Service 的职责是处理业务逻辑，它应该是抽象的，独立于任何数据源。
  *  因此，在 GraphQL + Sequelize 的架构中，
@@ -117,7 +117,12 @@ class Account extends Service {
    * @return {string} - 返回加密后的哈希字符串。
  */
   hashPassword(password, salt) {
-    const hash = crypto.pbkdf2Sync(password, salt, 5000, 64, 'sha256').toString('hex');
+    // const hash = crypto.pbkdf2Sync(password, salt, 5000, 64, 'sha256').toString('hex');
+    const hash = CryptoJS.PBKDF2(password, salt, {
+      keySize: 64 / 4, // 64 字节等于 512 位，而 keySize 以 32 位字为单位，64 字节等于 16 个字
+      iterations: 5000,
+      hasher: CryptoJS.algo.SHA256,
+    }).toString(CryptoJS.enc.Hex);
     return hash;
   }
 

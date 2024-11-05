@@ -7,19 +7,19 @@
     "declarations": true
   },
   "dependencies": {
-    "cheerio": "^1.0.0-rc.12",
+    "crypto-js": "^4.2.0",
     "dataloader": "^2.0.0",
     "egg": "^3.17.5",
     "egg-axios": "^1.1.6",
-    "egg-cors": "^2.2.3",
+    "egg-cors": "^3.0.1",
     "egg-graphql": "^2.8.0",
     "egg-jwt": "^3.1.7",
     "egg-passport": "^2.1.1",
     "egg-passport-local": "^1.2.1",
-    "egg-scripts": "^2.11.0",
+    "egg-scripts": "^3.0.1",
     "egg-sequelize": "^6.0.0",
     "graphql-scalars": "^1.20.4",
-    "mysql2": "^2.2.5",
+    "mysql2": "^3.11.3",
     "nodemailer": "^6.9.14"
   },
   "devDependencies": {
@@ -28,8 +28,8 @@
     "egg-bin": "^6",
     "egg-ci": "^2",
     "egg-mock": "^5",
-    "eslint": "^8",
-    "eslint-config-egg": "^13",
+    "eslint": "^8.57.1",
+    "eslint-config-egg": "^14.0.0",
     "sequelize-cli": "^6.2.0"
   },
   "engines": {

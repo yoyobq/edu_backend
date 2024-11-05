@@ -1,5 +1,4 @@
 /* eslint valid-jsdoc: "off" */
-const path = require('path');
 'use strict';
 
 /**
@@ -13,11 +12,20 @@ module.exports = appInfo => {
   const config = exports = {
     // config/config.${env}.js
     security: {
-      // 关于跨域安全
-      // 此处是 https://github.com/eggjs/egg/issues/3177 比较公认的解决方案
-      // domainWhiteList: [ 'http://localhost:8899' ], // 没有配置的话，错误信息：404
+    // 关于跨域安全，
+    // 此处是 https://github.com/eggjs/egg/issues/3177 比较公认的解决方案
+    // 由于 cors 插件也提供了白名单的功能，并且颗粒度更细，此处不启用 domian 白名单
+    // domainWhiteList: [
+    //   'http://192.168.72.55', // 生产环境域
+    //   'http://192.168.72.55:8000', // 开发环境域
+    // ], // 没有配置的话，错误信息：404
+
+      // 一直想试试 csrf，仔细研究下了，发现是无法拦截合法用户对数据的抓取的
+      // csrf 仅能防止第三方的中间人攻击，出于性能和服务器实际考量，关闭 csrf
       csrf: {
-        enable: false, // 暂时禁用掉 csrf，错误信息：403 missing csrf token
+        enable: false, // 关闭 CSRF 校验
+        ignoreJSON: false, // 即使 JSON 请求也进行 CSRF 校验
+        // 其他可选配置项
       },
     },
 
@@ -25,7 +33,14 @@ module.exports = appInfo => {
     cors: {
       // 这里，支持函数
       // {string|Function} origin: '*',
-      origin: '*',
+      origin: ctx => {
+        const allowedOrigins = [
+          'http://192.168.72.55', // 生产环境域
+          'http://192.168.72.55:8000', // 开发环境域
+        ];
+        // 检查请求来源是否在允许列表中
+        return allowedOrigins.includes(ctx.request.header.origin) ? ctx.request.header.origin : '';
+      },
       // {string|Array} allowMethods: 'GET,HEAD,PUT,POST,DELETE,PATCH',
       allowMethods: 'GET,HEAD,PUT,POST,DELETE,PATCH',
     },
@@ -44,7 +59,7 @@ module.exports = appInfo => {
     },
 
     logger: {
-      dir: path.join(__dirname, '../logs'), // 使用相对路径
+      dir: '/var/log/backend',
       level: 'INFO',
       consoleLevel: 'INFO',
       appLogName: 'app.log',
@@ -60,6 +75,7 @@ module.exports = appInfo => {
     logrotator: {
       maxDays: 10, // 日志保留的最大天数，超过的文件将被删除
       maxFiles: 10, // 最多保留的日志文件数，超过的文件将被删除
+      maxSize: 50 * 1024 * 1024, // 每个日志文件最大为 50MB
     },
 
     graphql: {
@@ -69,31 +85,18 @@ module.exports = appInfo => {
       // 是否加载到 agent 上，默认关闭
       agent: false,
       // 是否加载开发者工具 graphiql, 默认开启。路由同 router 字段。使用浏览器打开该可见。
-      graphiql: true,
+      graphiql: process.env.NODE_ENV === 'development',
       // 是否设置默认的Query和Mutation, 默认关闭
       defaultEmptySchema: true,
       // graphQL 路由前的拦截器
       // onPreGraphQL: function* (ctx) {},
       // 开发工具 graphiQL 路由前的拦截器，建议用于做权限操作(如只提供开发者使用)
-      // async onPreGraphiQL(ctx) {},
-      // apollo server的透传参数，参考[文档](https://www.apollographql.com/docs/apollo-server/api/apollo-server/#parameters)
-      // apolloServerOptions: {
-      //   rootValue,
-      //   formatError,
-      //   formatResponse,
-      //   mocks,
-      //   schemaDirectives,
-      //   introspection,
-      //   playground,
-      //   debug,
-      //   validationRules,
-      //   tracing,
-      //   cacheControl,
-      //   subscriptions,
-      //   engine,
-      //   persistedQueries,
-      //   cors,
-      // }
+      // 这是一个仅允许开发机使用的示例
+      onPreGraphiQL: async ctx => {
+        if (ctx.request.header.host !== '192.168.72.55') {
+          ctx.throw(403, `${ctx.request.header.host} Access Denied`);
+        }
+      },
     },
 
     // 选用 egg-jwt 处理 token 的初衷是方便直接在路由里写验证，
@@ -125,25 +128,17 @@ module.exports = appInfo => {
   // add your middleware config here
   config.middleware = [
     'validateHandler',
-    'graphqlResponseHandler',
+    'graphqlResponseHandler', // 正常引用中间件名称
     // 'errorHandler',
     'graphql',
   ];
   // middleware: [ 'errorHandler', 'validateHandler' ],
-
-  // add your user config here
-  const userConfig = {
-    // myAppName: 'egg',
-
-    // 只对 /graphql 前缀的 url 路径生效
-    graphqlResponseHandler: {
-      match: '/graphql',
-    },
+  // 为 graphqlResponseHandler 中间件设置路径匹配
+  config.graphqlResponseHandler = {
+    match: '/graphql', // 只对 /graphql 路径生效
   };
-
 
   return {
     ...config,
-    ...userConfig,
   };
 };

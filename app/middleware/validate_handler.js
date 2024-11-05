@@ -6,10 +6,6 @@
 
 'use strict';
 
-// 这是老版本的写法，目前已经不推荐
-// const url = require('url');
-const { URL } = require('url');
-
 module.exports = (_, app) => {
   return async function validateHandler(ctx, next) {
     // 原本更好的解决方法是为所有的 graphql 做 @auth，但时间关系暂时不用这种做法
