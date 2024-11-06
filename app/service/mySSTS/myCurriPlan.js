@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+// const { GraphQLError } = require('graphql');
 
 class MyCurriPlanService extends Service {
   // 测试页面，仅用于测试获取数据是否正常
@@ -8,9 +9,9 @@ class MyCurriPlanService extends Service {
     try {
       // 教务系统需要单独的 token
       const jiaoWuToken = await this.ctx.service.mySSTS.myLogin.getRefreshToken({ token, JSESSIONID_A, refreshToken });
-      console.log(token);
-      console.log(JSESSIONID_A);
-      console.log(jiaoWuToken);
+      // console.log(token);
+      // console.log(JSESSIONID_A);
+      // console.log(jiaoWuToken);
 
       const winTemp = `${Math.floor(Math.random() * 100000)}.${(Math.random()).toFixed(13).slice(2)}`;
       const userInfoUrl = `http://2.46.215.2:18000/jgyx-ui/jgyx/wechat/common/dictionary.action?frameControlSubmitFunction=loadDicItem&winTemp=${winTemp}`;
@@ -58,7 +59,7 @@ class MyCurriPlanService extends Service {
 
   // eslint-disable-next-line no-unused-vars
   async getCurriPlanSSTS({ token, JSESSIONID_A, refreshToken, userId }) {
-    console.log(JSESSIONID_A, userId);
+    // console.log(JSESSIONID_A, userId);
     try {
       // 教务系统需要单独的 token
       // eslint-disable-next-line no-unused-vars
@@ -90,7 +91,7 @@ class MyCurriPlanService extends Service {
         'Service-Type': 'Microservices',
         'User-Agent': this.ctx.request.headers['user-agent'],
       };
-      console.log(userId);
+      // console.log(userId);
       // 加密前的 payload 信息
       const plainTextData = {
         take: 100,
@@ -110,12 +111,12 @@ class MyCurriPlanService extends Service {
           course_id: '',
         },
       };
-      console.log(plainTextData);
+      // console.log(plainTextData);
       // 加密 payload
       const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(plainTextData);
-      console.log(payload);
-      const payload2 = 'hTcOK7xIDf4AKm1YZzIgjScs91EN0Ry5DOLrTDVQleiMycZKiOcymG85digViykkHomhpIW4gbmG1VinPEOZcXZtY/A0LK2HhXavtYK2YkunidQ3uteIYNhFeQJsl6E587vot4y5H5cp/w5ouWQMCCllI2MmewFV/FSjb0vA3qEF1KENZ3Igi8qATI7keV4rKp9vpJ+2t6+htprUDHVkFdOE8EwULaA2tURvLPgb40ZzViJN+eWReT1+gYt4G6YnTn9ydyJRK6W8lpdi6shI5/OomMkKqbPcmSA8tS/T2nMzIDjXhHpAAzl0BvNi9U96';
-      console.log(payload2);
+      // console.log(payload);
+      // const payload2 = 'hTcOK7xIDf4AKm1YZzIgjScs91EN0Ry5DOLrTDVQleiMycZKiOcymG85digViykkHomhpIW4gbmG1VinPEOZcXZtY/A0LK2HhXavtYK2YkunidQ3uteIYNhFeQJsl6E587vot4y5H5cp/w5ouWQMCCllI2MmewFV/FSjb0vA3qEF1KENZ3Igi8qATI7keV4rKp9vpJ+2t6+htprUDHVkFdOE8EwULaA2tURvLPgb40ZzViJN+eWReT1+gYt4G6YnTn9ydyJRK6W8lpdi6shI5/OomMkKqbPcmSA8tS/T2nMzIDjXhHpAAzl0BvNi9U96';
+      // console.log(payload2);
       // 发送请求
       const response = await this.ctx.curl(userInfoUrl, {
         method: 'POST',
@@ -128,7 +129,7 @@ class MyCurriPlanService extends Service {
       const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
       return data.data;
     } catch (error) {
-      this.ctx.logger.error('token 刷新:', error.message);
+      // this.ctx.logger.error('token 刷新:', error.message);
       throw error;
     }
   }

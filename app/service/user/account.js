@@ -2,7 +2,7 @@
 
 const Service = require('egg').Service;
 const CryptoJS = require('crypto-js');
-
+const { GraphQLError } = require('graphql');
 /** 23-3-18 Service 的职责是处理业务逻辑，它应该是抽象的，独立于任何数据源。
  *  因此，在 GraphQL + Sequelize 的架构中，
  *  Service 应该将它们的实现与 Sequelize 模型解耦，这样它们就可以处理不同的数据源，
@@ -29,7 +29,11 @@ class Account extends Service {
     // findByPk 也是
     const account = await this.ctx.model.Account.findByPk(id);
     if (!account) {
-      this.ctx.throw(404, 'id 为 ' + id + '的账号不存在');
+      throw new GraphQLError(`id 为 ${id} 的账号不存在`, {
+        extensions: {
+          code: 'USER_NOT_FOUND',
+        },
+      });
     }
     return account;
   }
@@ -69,7 +73,12 @@ class Account extends Service {
       const hashedPassword = await this.hashPassword(loginPassword, salt);
 
       if (hashedPassword !== account.loginPassword) {
-        throw new Error('用户名密码错或账号不存在');
+        throw new GraphQLError('用户名密码错或账号不存在', {
+          extensions: {
+            code: 'USER_NOT_FOUND',
+            showType: 2, // 2 代表前端用 message.error 显示
+          },
+        });
       }
 
       switch (account.dataValues.status) {
@@ -83,21 +92,49 @@ class Account extends Service {
             token,
           };
         case 'BANNED':
-          throw new Error('此账号封禁中，请联系管理员');
+          throw new GraphQLError('此账号封禁中，请联系管理员', {
+            extensions: {
+              code: 'USER_HAS_BANNED',
+              showType: 2,
+            },
+          });
         case 'DELETED':
-          throw new Error('此账户已被删除');
+          throw new GraphQLError('此账户已被删除', {
+            extensions: {
+              code: 'USER_HAS_DELETED',
+              showType: 2,
+            },
+          });
         case 'PENDING':
-          throw new Error('此账户尚未激活，请检查您的邮箱以激活账号');
+          throw new GraphQLError('此账户尚未激活，请联系管理员进行身份验证后激活', {
+            extensions: {
+              code: 'USER_IS_PENDING',
+              showType: 1,
+            },
+          });
         case 'SUSPENDED':
-          throw new Error('此账户已被暂停，请联系管理员');
+          throw new GraphQLError('此账户已被暂停，请联系管理员', {
+            extensions: {
+              code: 'USER_HAS_PENDING',
+              showType: 1,
+            },
+          });
         case 'INACTIVE':
-          throw new Error('此账户不活跃，请联系管理员');
+          throw new GraphQLError('此账户长期未使用被设置为不活跃，请联系管理员重新启用', {
+            extensions: {
+              code: 'USER_INACTIVE',
+              showType: 1,
+            },
+          });
         default:
-          throw new Error('未知登录错误，请稍后再试');
+          throw new GraphQLError('未知登录错误', {
+            extensions: {
+              code: 'USER_UNKNOWN_ERROR',
+              showType: 2, // 2 代表前端用 message.error 显示
+            },
+          });
       }
     }
-
-    throw new Error('用户名密码错或账号不存在');
   }
 
   async findByLoginEmail(loginEmail) {

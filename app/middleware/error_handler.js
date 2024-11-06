@@ -22,8 +22,8 @@ module.exports = () => {
     try {
       await next();
     } catch (error) {
-      console.log('-------- 通用异常处理（非 graphql ）----------');
       console.log(error);
+      console.log(ctx.body.errorCode);
       // 所有的异常都在 app 上触发一个 error 事件，框架会记录一条错误日志
       // ctx.thorw 或 throw new Error 都会主动触发这个异常
       // ctx.app.emit('error', err, ctx);

@@ -93,7 +93,7 @@ module.exports = appInfo => {
       // 开发工具 graphiQL 路由前的拦截器，建议用于做权限操作(如只提供开发者使用)
       // 这是一个仅允许开发机使用的示例
       onPreGraphiQL: async ctx => {
-        if (ctx.request.header.host !== '192.168.72.55') {
+        if (ctx.request.header.host !== '192.168.72.55:7001') {
           ctx.throw(403, `${ctx.request.header.host} Access Denied`);
         }
       },
@@ -133,9 +133,9 @@ module.exports = appInfo => {
 
   // add your middleware config here
   config.middleware = [
+    // 'errorHandler',
     'validateHandler',
     'graphqlResponseHandler', // 正常引用中间件名称
-    // 'errorHandler',
     'graphql',
   ];
   // middleware: [ 'errorHandler', 'validateHandler' ],

@@ -39,6 +39,7 @@ module.exports = () => {
       if (!isProduction) {
         const currentTime = new Date().toLocaleTimeString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' });
         console.log(`[${currentTime}]-------检测到外部发起的 GraphQL 查询-------`);
+        // console.log(ctx.request.body.query);
       } else {
         ctx.logger.info(`GraphQL 请求发起自: ${ctx.request.header.referer || ctx.request.header.origin}`);
       }
@@ -81,7 +82,7 @@ module.exports = () => {
         data: response.data,
         errorCode: response.errors ? response.errors[0].extensions.code : undefined,
         errorMessage: response.errors ? response.errors[0].message : undefined,
-        showType: response.errors ? 0 : undefined,
+        showType: response.errors ? response.errors[0].extensions.showType : 0, // 默认值 0 表示静默处理,
         // traceId: 2333,
         host: ctx.request.header.host,
       };
@@ -96,9 +97,9 @@ module.exports = () => {
       //   host?: string; // 便于后端故障排查的当前访问服务器的主机
       // }
       // 默认的接口反馈形式是 body { data:{}, errors {} } 感觉这种形式也不错，
-
       if (!isProduction) {
-        console.log('------- Graphql 查询处理完成 -------');
+        const currentTime = new Date().toLocaleTimeString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' });
+        console.log(`[${currentTime}]------- Graphql 查询处理完成 -------`);
       }
     }
   };
