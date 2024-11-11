@@ -1,64 +1,225 @@
 'use strict';
 
 const Service = require('egg').Service;
-// const { GraphQLError } = require('graphql');
 
 class MyCurriPlanService extends Service {
-  // 测试页面，仅用于测试获取数据是否正常
-  async tryToGetCurriPlanSSTS({ token, JSESSIONID_A, refreshToken }) {
-    try {
-      // 教务系统需要单独的 token
-      const jiaoWuToken = await this.ctx.service.mySSTS.myLogin.getRefreshToken({ token, JSESSIONID_A, refreshToken });
-      // console.log(token);
-      // console.log(JSESSIONID_A);
-      // console.log(jiaoWuToken);
+  // 获取需填写日志的总控方法
+  async getCurriPlanSSTS({ JSESSIONID_A, userId, token }) {
+    // 剔除还未到上课日期的课程（不需要填写日志）
+    function filterPastDateCurriculums({ tomorrow, planDetail }) {
+      // 按 THEORY_TEACHING_DATE 进行升序排序
+      planDetail.sort(function(a, b) {
+        return new Date(a.THEORY_TEACHING_DATE) - new Date(b.THEORY_TEACHING_DATE);
+      });
+      // 查找第一个晚于或等于明天的 THEORY_TEACHING_DATE 的索引位置
+      const cutoffIndex = planDetail.findIndex(function(item) {
+        return new Date(item.THEORY_TEACHING_DATE) >= tomorrow;
+      });
+      // 如果找到了符合条件的索引，则移除从该项到数组末尾的所有项
+      const pastDateCurriculums = cutoffIndex >= 0 ? planDetail.slice(0, cutoffIndex) : planDetail;
+      // console.log(pastDateCurriculums[pastDateCurriculums.length - 1 ]);
+      return pastDateCurriculums;
+    }
 
-      const winTemp = `${Math.floor(Math.random() * 100000)}.${(Math.random()).toFixed(13).slice(2)}`;
-      const userInfoUrl = `http://2.46.215.2:18000/jgyx-ui/jgyx/wechat/common/dictionary.action?frameControlSubmitFunction=loadDicItem&winTemp=${winTemp}`;
-      console.log(winTemp);
-      // 设定请求头
-      const headers = {
-        Accept: 'application/json, text/plain, */*',
-        'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5',
-        Authorization: `Bearer ${jiaoWuToken}`,
-        'Content-Length': '88',
-        'Content-Type': 'application/json;charset=UTF-8',
-        // 试验证明 SzmeSite=None; SzmeSite=None; 无意义，此处留作参考
-        Cookie: `SzmeSite=None; SzmeSite=None; JSESSIONID_A=${JSESSIONID_A}`,
-        DNT: '1',
-        Host: '2.46.215.2:18000',
-        Origin: 'http://2.46.215.2:18000',
-        'Proxy-Connection': 'keep-alive',
-        Referer: 'http://2.46.215.2:18000/jgyx-ui/EA09/EA0901/EA090102',
-        'Service-Type': 'Microservices',
-        'User-Agent': this.ctx.request.headers['user-agent'],
+    // 剔除已经填写过日志的记录（不需要重复填写）
+    function removeDuplicates(pastItemsOnlyPlanDetail, completedLogs) {
+      // 用来比较两个对象是否重复的辅助函数
+      const isDuplicate = (planItem, logItem) => {
+        return (
+          planItem.THEORY_TEACHING_DATE === logItem.TEACHING_DATE &&
+          planItem.SECTION_ID === logItem.SECTION_ID
+        );
       };
-      console.log(headers);
 
-      //  {"dicId":"DIC_SCHOOL_YEAR","dicListGroup":"","language":"1"} 测试用固定值
-      const payload = 'MGgh34eOwjWzuq5uRDrwjxfXhWu2J88s4D6OGGda+K/okUNZ9lK5Q+jfNC1OAGO/IoIMbs5nVivliaq789u6eQ==';
+      // 遍历 completedLogs 并检查是否在 pastItemsOnlyPlanDetail 中有对应项
+      for (let i = completedLogs.length - 1; i >= 0; i--) {
+        const logItem = completedLogs[i];
+        const index = pastItemsOnlyPlanDetail.findIndex(planItem => isDuplicate(planItem, logItem));
 
-      // 发送请求
-      const response = await this.ctx.curl(userInfoUrl, {
-        method: 'POST',
-        headers, // 设置请求头
-        data: payload, // 请求体内容
-        dataType: 'string', // 设置返回数据类型为 JSON
-        // withCredentials: true, // 发送凭证（Cookie）
+        if (index !== -1) {
+          pastItemsOnlyPlanDetail.splice(index, 1); // 从 pastItemsOnlyPlanDetail 删除对应项
+          completedLogs.splice(i, 1); // 从 completedLogs 删除当前项
+        }
+      }
+
+      return pastItemsOnlyPlanDetail;
+    }
+
+    // 将数组的每一项中的 SECTION_ID 中的每个数字按从小到大的顺序排列，并保持字符串格式
+    function sortSectionIds(array) {
+      return array.map(item => ({
+        ...item,
+        SECTION_ID: item.SECTION_ID
+          .split(',') // 将字符串按逗号分割成数组
+          .map(Number) // 将每一项转为数字
+          .sort((a, b) => a - b) // 数字从小到大排序
+          .map(String) // 再转换回字符串
+          .join(','), // 拼接回逗号分隔的字符串
+      }));
+    }
+
+    // 将 SECTION_NAME 中的每个中文数字，按从小到大排序
+    function sortSectionName(sectionName) {
+      // 将 section_name 转换成数组
+      const names = sectionName.split(',');
+
+      // 定义中文数字的顺序
+      const chineseNumbers = [ '一', '二', '三', '四', '五', '六', '七', '八', '九', '十' ];
+
+      // 按中文数字顺序对 names 进行排序
+      names.sort((a, b) => {
+        const indexA = chineseNumbers.indexOf(a[1]); // 获取中文数字的位置（跳过"第"字）
+        const indexB = chineseNumbers.indexOf(b[1]);
+        return indexA - indexB;
       });
 
-      const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
-      console.log(data);
-      return false;
-    } catch (error) {
-      this.ctx.logger.error('token 刷新:', error.message);
-      throw error;
+      // 将排序后的 names 合并回字符串
+      const sortedSectionName = names.join(',');
+
+      return sortedSectionName;
     }
+
+    // 清理教学计划列表 curriPlanList
+    function cleanCurriPlanListData(dataArray) {
+      return dataArray.map(curriPlanList => ({
+        curriPlanId: curriPlanList.LECTURE_PLAN_ID,
+        weeklyHours: curriPlanList.WEEKLY_HOURS,
+        className: curriPlanList.CLASS_NAME,
+        courseName: curriPlanList.COURSE_NAME,
+        schoolYear: curriPlanList.SCHOOL_YEAR,
+        semester: curriPlanList.SEMESTER,
+        teachingWeeksCount: curriPlanList.WEEK_COUNT,
+        teachingWeeksRange: curriPlanList.WEEK_NUMBER_SIMPSTR,
+        reviewStatus: curriPlanList.SSS002NAME,
+      }));
+    }
+
+    function cleanCurriDetailsData(dataArray) {
+      return dataArray.map(curriDetails => ({
+        teaching_class_id: curriDetails.teaching_class_id,
+        teaching_date: curriDetails.THEORY_TEACHING_DATE,
+        week_number: curriDetails.WEEK_NUMBER.toString(),
+        day_of_week: curriDetails.DAY_OF_WEEK.toString(),
+        lesson_hours: curriDetails.LESSON_HOURS,
+        course_content: curriDetails.TEACHING_CHAPTER_CONTENT,
+        homework_assignment: curriDetails.HOMEWORK,
+        topic_record: '良好',
+        section_id: curriDetails.SECTION_ID,
+        section_name: sortSectionName(curriDetails.SECTION_NAME),
+        journal_type: '1',
+      }));
+    }
+
+    try {
+      const curriPlanList = await this.getCurriPlanListSSTS({ JSESSIONID_A, userId, token });
+
+      const delay = Math.floor(100 + Math.random() * 100);
+      await new Promise(resolve => setTimeout(resolve, delay));
+
+      const teachingLogOverview = await this.getTeachingLogOverviewSSTS({ JSESSIONID_A, userId, token });
+
+      // 清洗计划列表数据，仅保留有效数据后排序
+      // LECTURE_PLAN_ID    被后台接口用于获取计划详情时区分课程
+      // 下面这个神奇的字段按照分析也能用于区分课程，计划、日志中均有出现，但不知为何仅提交不使用
+      // TEACHING_CLASS_ID
+      const curriPlanIds = curriPlanList
+        .map(item => ({
+          planId: item.LECTURE_PLAN_ID,
+          teachingClassId: item.TEACHING_CLASS_ID,
+        }))
+        .sort((a, b) =>
+          a.teachingClassId.localeCompare(b.teachingClassId)
+        );
+
+      // 清洗计划列表数据，仅保留有效数据后排序
+      // 后台接口用于获取日志详情时区分课程，！需要特别注意的是！如果从未填过日志，值是 null
+      // LECTURE_JOURNAL_ID
+      // 下面这个神奇的字段按照分析也能用于区分课程，计划、日志中均有出现，但不知为何仅提交不使用
+      // TEACHING_CLASS_ID
+      const teachingLogIds = teachingLogOverview
+        .map(item => ({
+          logId: item.LECTURE_JOURNAL_ID,
+          teachingClassId: item.TEACHING_CLASS_ID,
+        }))
+        .sort((a, b) =>
+          a.teachingClassId.localeCompare(b.teachingClassId)
+        );
+
+      // 一个存放所有需填写日志的计划详情列表
+      const allCurriDetails = [];
+
+      // 获取 yyyy-mm-dd 格式的时间对象，并设置为东八区 0 点
+      const today = new Date();
+      today.setHours(8, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      // 按课程取出计划，并进一步清洗无效数据
+      for (const [ index, planIds ] of curriPlanIds.entries()) {
+        // 临时代码，查看指定课程
+        // if (planIds.planId !== '40349a5691c17ed70191c4c3ee1e036a') {
+        //   continue;
+        // }
+
+        // 首先获取的是对应 planIds 这门课的所有的教学计划详情
+        const planDetail = await this.getCurriPlanDetailSSTS({ JSESSIONID_A, planId: planIds.planId, token });
+        // 把详情中包含了当天的所有已经上过的课程都选出来
+        let pastItemsOnlyPlanDetail = filterPastDateCurriculums({ tomorrow, planDetail });
+        pastItemsOnlyPlanDetail = sortSectionIds(pastItemsOnlyPlanDetail);
+        // 继续剔除已经填过日志的课程
+        // 如果没写过日志，当然不用剔除任何内容
+        console.log(pastItemsOnlyPlanDetail.length);
+        let cleanedData = [];
+        if (teachingLogIds[index].logId != null) {
+          // 否则，根据 teaching_class_id 获取日志内容
+          const teachingClassId = teachingLogIds[index].teachingClassId;
+          let completedLogs = await this.getTeachingLogListSSTS({ JSESSIONID_A, teachingClassId, token });
+          completedLogs = sortSectionIds(completedLogs);
+
+          // console.log('仅保留已经上过课的 json 数组');
+          // console.log(pastItemsOnlyPlanDetail);
+          // console.log('已完成日志填写的 json 数组');
+          // console.log(completedLogs);
+          // 继续清洗只保留了上过课的日志详情列表，将已经填写过的日志剔除
+          cleanedData = removeDuplicates(pastItemsOnlyPlanDetail, completedLogs);
+        } else {
+          cleanedData = pastItemsOnlyPlanDetail;
+        }
+
+        // 为清洗后的数组的每一项都加上 teaching_class_id
+        cleanedData.forEach(item => {
+          item.teaching_class_id = planIds.teachingClassId;
+        });
+
+        console.log(index, cleanedData.length);
+        allCurriDetails.push(...cleanedData);
+
+        // break;
+      }
+      // 将需要填写的日志，按 THEORY_TEACHING_DATE 进行升序排序
+      allCurriDetails.sort(function(a, b) {
+        return new Date(a.THEORY_TEACHING_DATE) - new Date(b.THEORY_TEACHING_DATE);
+      });
+      // console.log('清理数据后，需要填写日志的 json 数组');
+      // console.log(allCurriDetails[0]);
+      const planList = cleanCurriPlanListData(curriPlanList);
+      const curriDetails = cleanCurriDetailsData(allCurriDetails);
+      const curriPlan = {
+        planList,
+        curriDetails,
+      };
+
+      return curriPlan;
+    } catch (error) {
+      console.log('出错');
+      console.log(error);
+    }
+
+    return false;
   }
 
-  // eslint-disable-next-line no-unused-vars
-  async getCurriPlanSSTS({ token, JSESSIONID_A, refreshToken, userId }) {
+  // 第一步: 获取计划列表
+  async getCurriPlanListSSTS({ JSESSIONID_A, userId, token }) {
     // console.log(JSESSIONID_A, userId);
     try {
       // 教务系统需要单独的 token
@@ -71,14 +232,14 @@ class MyCurriPlanService extends Service {
       ).join('');
       // 生成 0 到 1 之间的随机浮点数字符串，并截取小数点后 13 位
       const randomFloat = Math.random().toFixed(13).slice(2); // slice(1) 移除前面的 "0"
-      const userInfoUrl = `http://2.46.215.2:18000/jgyx-ui/jgyx/frame/component/pagegrid/pagegrid.action?frameControlSubmitFunction=query&winTemp=Q_EA_Lecture_Plan_Edit${randomHex}.${randomFloat}`;
+      const url = `http://2.46.215.2:18000/jgyx-ui/jgyx/frame/component/pagegrid/pagegrid.action?frameControlSubmitFunction=query&winTemp=Q_EA_Lecture_Plan_Edit${randomHex}.${randomFloat}`;
 
       // 设定请求头
       const headers = {
         Accept: 'text/plain, */*; q=0.01',
         'Accept-Encoding': 'gzip, deflate',
         'Accept-Language': 'en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5',
-        // Authorization: `Bearer ${jiaoWuToken}`,
+        Authorization: `Bearer ${token}`,
         'Content-Length': '320',
         'Content-Type': 'application/json;charset=UTF-8',
         // 试验证明 SzmeSite=None; SzmeSite=None; 无意义，此处留作参考
@@ -99,6 +260,7 @@ class MyCurriPlanService extends Service {
         page: 1,
         pageSize: 100,
         group: [],
+        // 可笑，这个字段是无效的
         queryNo: 'Q_EA_Lecture_Plan_Edit',
         queryWindow: '1',
         connectId: '1',
@@ -118,7 +280,7 @@ class MyCurriPlanService extends Service {
       // const payload2 = 'hTcOK7xIDf4AKm1YZzIgjScs91EN0Ry5DOLrTDVQleiMycZKiOcymG85digViykkHomhpIW4gbmG1VinPEOZcXZtY/A0LK2HhXavtYK2YkunidQ3uteIYNhFeQJsl6E587vot4y5H5cp/w5ouWQMCCllI2MmewFV/FSjb0vA3qEF1KENZ3Igi8qATI7keV4rKp9vpJ+2t6+htprUDHVkFdOE8EwULaA2tURvLPgb40ZzViJN+eWReT1+gYt4G6YnTn9ydyJRK6W8lpdi6shI5/OomMkKqbPcmSA8tS/T2nMzIDjXhHpAAzl0BvNi9U96';
       // console.log(payload2);
       // 发送请求
-      const response = await this.ctx.curl(userInfoUrl, {
+      const response = await this.ctx.curl(url, {
         method: 'POST',
         headers, // 设置请求头
         data: payload, // 请求体内容
@@ -133,35 +295,213 @@ class MyCurriPlanService extends Service {
       throw error;
     }
   }
+
+  // 第二步： 获取计划详情
+  async getCurriPlanDetailSSTS({ JSESSIONID_A, planId, token }) {
+    const randomHex = Array.from({ length: 9 }, () =>
+      Math.floor(Math.random() * 16).toString(16)
+    ).join('');
+    // 生成 0 到 1 之间的随机浮点数字符串，并截取小数点后 13 位
+    const randomFloat = Math.random().toFixed(13).slice(2); // slice(1) 移除前面的 "0"
+    const url = `http://2.46.215.2:18000/jgyx-ui/jgyx/frame/component/pagegrid/pagegrid.action?frameControlSubmitFunction=query&winTemp=Q_EA_Lecture_Plan_Detail${randomHex}.${randomFloat}`;
+
+    // 设定请求头
+    const headers = {
+      Accept: 'text/plain, */*; q=0.01',
+      'Accept-Encoding': 'gzip, deflate',
+      'Accept-Language': 'en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5',
+      Authorization: `Bearer ${token}`,
+      'Content-Length': '280',
+      'Content-Type': 'application/json;charset=UTF-8',
+      // 试验证明 SzmeSite=None; SzmeSite=None; 无意义，此处留作参考
+      Cookie: `SzmeSite=None; SzmeSite=None; JSESSIONID_A=${JSESSIONID_A}`,
+      DNT: '1',
+      Host: '2.46.215.2:18000',
+      Origin: 'http://2.46.215.2:18000',
+      'Proxy-Connection': 'keep-alive',
+      Referer: `http://2.46.215.2:18000/jgyx-ui/CMU09/CMU090101/index?lecture_plan_id=${planId}`, // &course_category=1&course_name=1031114G%E4%BF%A1%E6%81%AF%E6%A3%80%E7%B4%A2&class_name=%E4%BF%A1%E6%81%AF2404%E7%8F%AD,%E4%BF%A1%E6%81%AF2405%E7%8F%AD&teacher_name=%E5%8D%9C%E5%BC%BA&course_class=1`,
+      'User-Agent': this.ctx.request.headers['user-agent'],
+    };
+
+    // 加密前的 payload 信息
+    const plainTextData = {
+      take: 100,
+      skip: 0,
+      page: 1,
+      pageSize: 100,
+      group: [],
+      queryNo: 'Q_EA_Lecture_Plan_Detail',
+      queryWindow: '1',
+      connectId: '1',
+      whereParams: {
+        lecture_plan_id: planId,
+      },
+    };
+
+    try {
+      // 加密 payload
+      const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(plainTextData);
+
+      const response = await this.ctx.curl(url, {
+        method: 'POST',
+        headers, // 设置请求头
+        data: payload, // 请求体内容
+        dataType: 'string', // 设置返回数据类型为 JSON
+        // withCredentials: true, // 发送凭证（Cookie）
+      });
+
+      // 解密 response
+      const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
+
+      // 由于这个函数会在循环中执行
+      // 为避免意外并发影响校园网服务器工作，
+      // 每次成功查询数据后，随机延时 100 到 200 毫秒
+      const delay = Math.floor(100 + Math.random() * 100);
+      await new Promise(resolve => setTimeout(resolve, delay));
+
+      return data.data;
+    } catch (error) {
+      this.ctx.logger.error('获取日志详情报错:', error.message);
+      throw error;
+    }
+  }
+
+  // 第三步：获取可填写日志概览
+  async getTeachingLogOverviewSSTS({ JSESSIONID_A, userId, token }) {
+    try {
+      // 生成 8 位 16 进制随机字符串
+      const randomHex = Array.from({ length: 8 }, () =>
+        Math.floor(Math.random() * 16).toString(16)
+      ).join('');
+      // 生成 0 到 1 之间的随机浮点数字符串，并截取小数点后 13 位
+      const randomFloat = Math.random().toFixed(13).slice(2); // slice(1) 移除前面的 "0"
+      const url = `http://2.46.215.2:18000/jgyx-ui/jgyx/frame/component/pagegrid/pagegrid.action?frameControlSubmitFunction=query&winTemp=Q_EA_Lecture_Journal_Course${randomHex}.${randomFloat}`;
+
+      // 设定请求头
+      const headers = {
+        Accept: 'text/plain, */*; q=0.01',
+        'Accept-Encoding': 'gzip, deflate',
+        'Accept-Language': 'en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5',
+        Authorization: `Bearer ${token}`,
+        'Content-Length': '280',
+        'Content-Type': 'application/json;charset=UTF-8',
+        // 试验证明 SzmeSite=None; SzmeSite=None; 无意义，此处留作参考
+        Cookie: `SzmeSite=None; SzmeSite=None; JSESSIONID_A=${JSESSIONID_A}`,
+        DNT: '1',
+        Host: '2.46.215.2:18000',
+        Origin: 'http://2.46.215.2:18000',
+        'Proxy-Connection': 'keep-alive',
+        Referer: 'http://2.46.215.2:18000/jgyx-ui/EA09/EA0902/EA090201',
+        // 'Service-Type': 'Microservices',
+        'User-Agent': this.ctx.request.headers['user-agent'],
+      };
+      // 加密前的 payload 信息
+      const plainTextData = {
+        take: 100,
+        skip: 0,
+        page: 1,
+        pageSize: 100,
+        group: [],
+        // 可笑，这个字段是无效的
+        queryNo: 'Q_EA_Lecture_Journal_Course',
+        queryWindow: '1',
+        connectId: '1',
+        whereParams: {
+          userId,
+          school_year: '2024',
+          semester: '1',
+        },
+      };
+
+      const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(plainTextData);
+
+      const response = await this.ctx.curl(url, {
+        method: 'POST',
+        headers, // 设置请求头
+        data: payload, // 请求体内容
+        dataType: 'string', // 设置返回数据类型为 JSON
+        // withCredentials: true, // 发送凭证（Cookie）
+      });
+
+      const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
+      return data.data;
+    } catch (error) {
+      // this.ctx.logger.error('token 刷新:', error.message);
+      throw error;
+    }
+  }
+
+  // 第四步：获取某课程已填写日志详情
+  async getTeachingLogListSSTS({ JSESSIONID_A, teachingClassId, token }) {
+
+    const randomHex = Array.from({ length: 8 }, () =>
+      Math.floor(Math.random() * 16).toString(16)
+    ).join('');
+    // 生成 0 到 1 之间的随机浮点数字符串，并截取小数点后 13 位
+    const randomFloat = Math.random().toFixed(13).slice(2); // slice(1) 移除前面的 "0"
+    const url = `http://2.46.215.2:18000/jgyx-ui/jgyx/frame/component/pagegrid/pagegrid.action?frameControlSubmitFunction=query&winTemp=Q_EA_Lecture_Journal_List${randomHex}.${randomFloat}`;
+
+    // 设定请求头
+    const headers = {
+      Accept: 'text/plain, */*; q=0.01',
+      'Accept-Encoding': 'gzip, deflate',
+      'Accept-Language': 'en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5',
+      Authorization: `Bearer ${token}`,
+      'Content-Length': '280',
+      'Content-Type': 'application/json;charset=UTF-8',
+      // 试验证明 SzmeSite=None; SzmeSite=None; 无意义，此处留作参考
+      Cookie: `SzmeSite=None; SzmeSite=None; JSESSIONID_A=${JSESSIONID_A}`,
+      DNT: '1',
+      Host: '2.46.215.2:18000',
+      Origin: 'http://2.46.215.2:18000',
+      'Proxy-Connection': 'keep-alive',
+      Referer: `http://2.46.215.2:18000/jgyx-ui/CMU09/CMU090201/index?teaching_class_id=${teachingClassId}`,
+      'User-Agent': this.ctx.request.headers['user-agent'],
+    };
+
+    // 加密前的 payload 信息
+    const plainTextData = {
+      take: 100,
+      skip: 0,
+      page: 1,
+      pageSize: 100,
+      group: [],
+      queryNo: 'Q_EA_Lecture_Journal_List',
+      queryWindow: '1',
+      connectId: '1',
+      whereParams: {
+        teaching_class_id: teachingClassId,
+      },
+    };
+
+    try {
+      // 加密 payload
+      const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(plainTextData);
+
+      const response = await this.ctx.curl(url, {
+        method: 'POST',
+        headers, // 设置请求头
+        data: payload, // 请求体内容
+        dataType: 'string', // 设置返回数据类型为 JSON
+        // withCredentials: true, // 发送凭证（Cookie）
+      });
+
+      // 解密 response
+      const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
+
+      // 由于这个函数会在循环中执行
+      // 为避免意外并发影响校园网服务器工作，
+      // 每次成功查询数据后，随机延时 100 到 200 毫秒
+      const delay = Math.floor(100 + Math.random() * 100);
+      await new Promise(resolve => setTimeout(resolve, delay));
+
+      return data.data;
+    } catch (error) {
+      this.ctx.logger.error('获取单课程日志列表报错:', error.message);
+      throw error;
+    }
+  }
+
 }
 
 module.exports = MyCurriPlanService;
-
-
-// http://2.46.215.2:18000/jgyx-ui/jgyx/frame/component/pagegrid/pagegrid.action?frameControlSubmitFunction=query&winTemp=Q_EA_Lecture_Plan_Detail72daf2547.619326426913
-
-// accept: text/plain, */*; q=0.01
-// accept-encoding:
-// gzip, deflate
-// accept-language:
-// en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5
-// content-length:
-// 280
-// content-type:
-// application/json; charset=UTF-8
-// cookie:
-// SzmeSite=None; SzmeSite=None; JSESSIONID_A=WHQNpuR1qnh2Eb-f1IFhyiaKxDC5hB9Fe0mfU5b5.ecs-b00c-0004
-// dnt:
-// 1
-// host:
-// 2.46.215.2:18000
-// origin:
-// http://2.46.215.2:18000
-// proxy-connection:
-// keep-alive
-// referer:
-// http://2.46.215.2:18000/jgyx-ui/CMU09/CMU090101/index?lecture_plan_id=40349a5691c17ed70191c4d401ed03b2&course_category=1&course_name=1031114G%E4%BF%A1%E6%81%AF%E6%A3%80%E7%B4%A2&class_name=%E4%BF%A1%E6%81%AF2404%E7%8F%AD,%E4%BF%A1%E6%81%AF2405%E7%8F%AD&teacher_name=%E5%8D%9C%E5%BC%BA&course_class=1
-// user-agent:
-// Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0
-
-// hTcOK7xIDf4AKm1YZzIgjScs91EN0Ry5DOLrTDVQleiMycZKiOcymG85digViykkHomhpIW4gbmG1VinPEOZcXZtY/A0LK2HhXavtYK2YkuHvystdNj1waqoWVZr+Kq38WHNYaAaZK4cPY1nCpDht0YaAu2o+wQgVwHhKGe3f+aJc1zd30bVmW2WFio9fuivKlbbISQlVfgBhtGDCCQ0SvYpAIQrrVRCEI8Ef4O58kmXke3ilrrigL5xjII6tOmVxmgFewV68aFKq1t3fjLETg==

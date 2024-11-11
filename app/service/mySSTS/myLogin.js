@@ -105,12 +105,20 @@ class MyLoginService extends Service {
             JSESSIONID_A: jsessionId,
           });
 
+          // console.log(data.data);
+          const jiaoWuToken = await this.getRefreshToken({
+            token: data.data.token,
+            JSESSIONID_A: jsessionId,
+            refreshToken: data.data.refreshToken,
+          });
+
           // 根据 graphql 接口定义返回有效数据以便后续使用
           const sstsLoginResponse = {
             success: true,
             cookie: data.data,
             jsessionCookie,
             userInfo,
+            refreshedToken: jiaoWuToken,
           };
 
           return sstsLoginResponse;

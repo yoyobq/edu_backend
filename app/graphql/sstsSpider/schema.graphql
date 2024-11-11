@@ -14,16 +14,26 @@ type SstsLoginResponse {
   success: Boolean!    # 登录结果是否成功
   cookie: JSON       # 登录成功返回数据里的 cookie
   jsessionCookie: String #  response header 里的 JSESSIONID_A 完整字符串
-  userInfo: JSON # 获取的 userInfo 
+  userInfo: JSON # 获取的 userInfo
+  refreshedToken: String # 目前是教务系统的独立 token，可以改造成万用形式
 }
 
-# 输入保留的会话信息 
-input SstsSessionInfo {
+# 保留的会话信息和用户 ID
+input SstsSessionInput {
   JSESSIONID_A: String!
-  token: String!
-  refreshToken: String!
   userId: String!
+  token: String!
 }
+
+# refresh Token 操作放在了一个实验性 service
+# tryToGetCurriPlanSSTS
+# 由于获取信息根本不需要新的 token，仅保留注释做参考
+# input SstsrefreshTokenInput {
+#   JSESSIONID_A: String!
+#   token: String!
+#   refreshToken: String!
+# }
+
 
 # 查询类型定义
 extend type Query {
@@ -32,5 +42,6 @@ extend type Query {
   传递用户ID和密码，并返回登录状态及 Cookie。
   """
   sstsLogin(input: SstsLoginInput!): SstsLoginResponse!     # 返回登录结果和 Cookie
-  sstsGetCurriPlan(input: SstsSessionInfo!): JSON!
+  sstsGetCurriPlan(input: SstsSessionInput!): JSON!
+  # sstsGetCurriPlanDetail(input:SstsCurriPlanDetailInput!): JSON!
 }
