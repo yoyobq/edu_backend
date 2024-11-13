@@ -107,6 +107,8 @@ class MyCurriPlanService extends Service {
         section_id: curriDetails.SECTION_ID,
         section_name: sortSectionName(curriDetails.SECTION_NAME),
         journal_type: '1',
+        className: curriDetails.className,
+        courseName: curriDetails.courseName,
       }));
     }
 
@@ -126,12 +128,14 @@ class MyCurriPlanService extends Service {
         .map(item => ({
           planId: item.LECTURE_PLAN_ID,
           teachingClassId: item.TEACHING_CLASS_ID,
+          className: item.CLASS_NAME,
+          courseName: item.COURSE_NAME,
         }))
         .sort((a, b) =>
           a.teachingClassId.localeCompare(b.teachingClassId)
         );
 
-      // 清洗计划列表数据，仅保留有效数据后排序
+      // 清洗日志列表数据，仅保留有效数据后排序
       // 后台接口用于获取日志详情时区分课程，！需要特别注意的是！如果从未填过日志，值是 null
       // LECTURE_JOURNAL_ID
       // 下面这个神奇的字段按照分析也能用于区分课程，计划、日志中均有出现，但不知为何仅提交不使用
@@ -168,7 +172,7 @@ class MyCurriPlanService extends Service {
         pastItemsOnlyPlanDetail = sortSectionIds(pastItemsOnlyPlanDetail);
         // 继续剔除已经填过日志的课程
         // 如果没写过日志，当然不用剔除任何内容
-        console.log(pastItemsOnlyPlanDetail.length);
+        // console.log(pastItemsOnlyPlanDetail.length);
         let cleanedData = [];
         if (teachingLogIds[index].logId != null) {
           // 否则，根据 teaching_class_id 获取日志内容
@@ -186,9 +190,12 @@ class MyCurriPlanService extends Service {
           cleanedData = pastItemsOnlyPlanDetail;
         }
 
-        // 为清洗后的数组的每一项都加上 teaching_class_id
+        // console.log(planIds);
+        // 为清洗后的数组的每一项都加上 teaching_class_id 以及课程名，班级名等冗余数据。
         cleanedData.forEach(item => {
           item.teaching_class_id = planIds.teachingClassId;
+          item.className = planIds.className;
+          item.courseName = planIds.courseName;
         });
 
         console.log(index, cleanedData.length);
@@ -198,7 +205,17 @@ class MyCurriPlanService extends Service {
       }
       // 将需要填写的日志，按 THEORY_TEACHING_DATE 进行升序排序
       allCurriDetails.sort(function(a, b) {
-        return new Date(a.THEORY_TEACHING_DATE) - new Date(b.THEORY_TEACHING_DATE);
+        // 首先按 THEORY_TEACHING_DATE 升序排序
+        const dateDifference = new Date(a.THEORY_TEACHING_DATE) - new Date(b.THEORY_TEACHING_DATE);
+        if (dateDifference !== 0) {
+          return dateDifference;
+        }
+
+        // 如果 THEORY_TEACHING_DATE 相同，则按 SECTION_ID 首位字符进行排序
+        const sectionA = parseInt(a.SECTION_ID.split(',')[0], 10);
+        const sectionB = parseInt(b.SECTION_ID.split(',')[0], 10);
+
+        return sectionA - sectionB;
       });
       // console.log('清理数据后，需要填写日志的 json 数组');
       // console.log(allCurriDetails[0]);
