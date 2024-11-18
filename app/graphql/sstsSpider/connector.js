@@ -30,6 +30,11 @@ class SstsSpiderConnector {
     const response = await this.ctx.service.mySSTS.myCurriPlan.getCurriPlanSSTS({ JSESSIONID_A, userId, token });
     return response;
   }
+
+  async submitTeachingLog(input) {
+    const logData = await this.ctx.service.mySSTS.myCurriPlan.submitTeachingLog(input);
+    return logData;
+  }
 }
 
 module.exports = SstsSpiderConnector;

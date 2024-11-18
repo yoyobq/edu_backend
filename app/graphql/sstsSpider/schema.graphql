@@ -25,6 +25,26 @@ input SstsSessionInput {
   token: String!
 }
 
+input TeachingLogData {
+  teaching_class_id: String!
+  teaching_date: String!
+  week_number: String!
+  day_of_week: String!
+  lesson_hours: Int!
+  section_id: String!
+  section_name: String
+  journal_type: String!
+  topic_record: String!
+  homework_assignment: String!
+  course_content: String! 
+}
+
+input TeachingLogInput {
+  teachingLogData: TeachingLogData!
+  JSESSIONID_A: String!
+  # userId: String!
+  token: String!
+}
 # refresh Token 操作放在了一个实验性 service
 # tryToGetCurriPlanSSTS
 # 由于获取信息根本不需要新的 token，仅保留注释做参考
@@ -33,7 +53,6 @@ input SstsSessionInput {
 #   token: String!
 #   refreshToken: String!
 # }
-
 
 # 查询类型定义
 extend type Query {
@@ -44,4 +63,8 @@ extend type Query {
   sstsLogin(input: SstsLoginInput!): SstsLoginResponse!     # 返回登录结果和 Cookie
   sstsGetCurriPlan(input: SstsSessionInput!): JSON!
   # sstsGetCurriPlanDetail(input:SstsCurriPlanDetailInput!): JSON!
+}
+
+extend type Mutation {
+  sstsSubmitTeachingLog(input: TeachingLogInput!): JSON!
 }

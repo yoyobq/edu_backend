@@ -7,17 +7,19 @@ class MyCurriPlanService extends Service {
   async getCurriPlanSSTS({ JSESSIONID_A, userId, token }) {
     // 剔除还未到上课日期的课程（不需要填写日志）
     function filterPastDateCurriculums({ tomorrow, planDetail }) {
-      // 按 THEORY_TEACHING_DATE 进行升序排序
+      // 按日期升序排序，优先使用 THEORY_TEACHING_DATE，如果不存在则使用 PRACTICE_TEACHING_DATE
       planDetail.sort(function(a, b) {
-        return new Date(a.THEORY_TEACHING_DATE) - new Date(b.THEORY_TEACHING_DATE);
+        const dateA = a.THEORY_TEACHING_DATE || a.PRACTICE_TEACHING_DATE;
+        const dateB = b.THEORY_TEACHING_DATE || b.PRACTICE_TEACHING_DATE;
+        return new Date(dateA) - new Date(dateB);
       });
-      // 查找第一个晚于或等于明天的 THEORY_TEACHING_DATE 的索引位置
+      // 查找第一个晚于或等于明天的日期项
       const cutoffIndex = planDetail.findIndex(function(item) {
-        return new Date(item.THEORY_TEACHING_DATE) >= tomorrow;
+        const date = item.THEORY_TEACHING_DATE || item.PRACTICE_TEACHING_DATE;
+        return new Date(date) >= tomorrow;
       });
       // 如果找到了符合条件的索引，则移除从该项到数组末尾的所有项
       const pastDateCurriculums = cutoffIndex >= 0 ? planDetail.slice(0, cutoffIndex) : planDetail;
-      // console.log(pastDateCurriculums[pastDateCurriculums.length - 1 ]);
       return pastDateCurriculums;
     }
 
@@ -25,11 +27,19 @@ class MyCurriPlanService extends Service {
     function removeDuplicates(pastItemsOnlyPlanDetail, completedLogs) {
       // 用来比较两个对象是否重复的辅助函数
       const isDuplicate = (planItem, logItem) => {
-        return (
-          planItem.THEORY_TEACHING_DATE === logItem.TEACHING_DATE &&
-          planItem.SECTION_ID === logItem.SECTION_ID
-        );
+        // 判断 planItem.THEORY_TEACHING_DATE 是否存在
+        if (planItem.THEORY_TEACHING_DATE) {
+          return planItem.THEORY_TEACHING_DATE === logItem.TEACHING_DATE && planItem.SECTION_ID === logItem.SECTION_ID;
+        }
+
+        // 如果 THEORY_TEACHING_DATE 不存在，则比较 PRACTICE_TEACHING_DATE
+        if (planItem.PRACTICE_TEACHING_DATE) {
+          return planItem.PRACTICE_TEACHING_DATE === logItem.TEACHING_DATE && planItem.SECTION_ID === logItem.SECTION_ID;
+        }
+        // 如果两个都不存在，抛出错误
+        throw new Error('抓取的数据未提供理论课程日期或实训课程日期，流程中止。');
       };
+
 
       // 遍历 completedLogs 并检查是否在 pastItemsOnlyPlanDetail 中有对应项
       for (let i = completedLogs.length - 1; i >= 0; i--) {
@@ -47,20 +57,35 @@ class MyCurriPlanService extends Service {
 
     // 将数组的每一项中的 SECTION_ID 中的每个数字按从小到大的顺序排列，并保持字符串格式
     function sortSectionIds(array) {
-      return array.map(item => ({
-        ...item,
-        SECTION_ID: item.SECTION_ID
-          .split(',') // 将字符串按逗号分割成数组
-          .map(Number) // 将每一项转为数字
-          .sort((a, b) => a - b) // 数字从小到大排序
-          .map(String) // 再转换回字符串
-          .join(','), // 拼接回逗号分隔的字符串
-      }));
+      return array.map(item => {
+        const sectionId = item.SECTION_ID;
+
+        // 如果 SECTION_ID 为 null 或 undefined，直接返回
+        if (sectionId == null) {
+          return { ...item, SECTION_ID: sectionId };
+        }
+
+        // 如果 SECTION_ID 只有一个值，不进行排序，原样返回
+        const sectionIdArray = sectionId.split(',');
+        if (sectionIdArray.length === 1) {
+          return { ...item, SECTION_ID: sectionId };
+        }
+
+        // 如果有多个值，进行排序并拼接成字符串
+        const sortedSectionId = sectionIdArray
+          .map(Number) // 转为数字
+          .sort((a, b) => a - b) // 从小到大排序
+          .map(String) // 转回字符串
+          .join(','); // 拼接成逗号分隔的字符串
+
+        return { ...item, SECTION_ID: sortedSectionId };
+      });
     }
 
     // 将 SECTION_NAME 中的每个中文数字，按从小到大排序
     function sortSectionName(sectionName) {
       // 将 section_name 转换成数组
+      // console.log(sectionName);
       const names = sectionName.split(',');
 
       // 定义中文数字的顺序
@@ -97,7 +122,8 @@ class MyCurriPlanService extends Service {
     function cleanCurriDetailsData(dataArray) {
       return dataArray.map(curriDetails => ({
         teaching_class_id: curriDetails.teaching_class_id,
-        teaching_date: curriDetails.THEORY_TEACHING_DATE,
+        // 理论教学时间，实践教学时间
+        teaching_date: curriDetails.THEORY_TEACHING_DATE || curriDetails.PRACTICE_TEACHING_DATE,
         week_number: curriDetails.WEEK_NUMBER.toString(),
         day_of_week: curriDetails.DAY_OF_WEEK.toString(),
         lesson_hours: curriDetails.LESSON_HOURS,
@@ -105,8 +131,9 @@ class MyCurriPlanService extends Service {
         homework_assignment: curriDetails.HOMEWORK,
         topic_record: '良好',
         section_id: curriDetails.SECTION_ID,
-        section_name: sortSectionName(curriDetails.SECTION_NAME),
-        journal_type: '1',
+        section_name: curriDetails.SECTION_NAME !== null ? sortSectionName(curriDetails.SECTION_NAME) : curriDetails.SECTION_NAME,
+        // 理论是1，实践是2，如果得不到准确的值，就主动报错
+        journal_type: curriDetails.THEORY_TEACHING_DATE ? 1 : (curriDetails.PRACTICE_TEACHING_DATE ? 2 : null),
         className: curriDetails.className,
         courseName: curriDetails.courseName,
       }));
@@ -167,6 +194,7 @@ class MyCurriPlanService extends Service {
 
         // 首先获取的是对应 planIds 这门课的所有的教学计划详情
         const planDetail = await this.getCurriPlanDetailSSTS({ JSESSIONID_A, planId: planIds.planId, token });
+        // console.log(planDetail);
         // 把详情中包含了当天的所有已经上过的课程都选出来
         let pastItemsOnlyPlanDetail = filterPastDateCurriculums({ tomorrow, planDetail });
         pastItemsOnlyPlanDetail = sortSectionIds(pastItemsOnlyPlanDetail);
@@ -181,7 +209,7 @@ class MyCurriPlanService extends Service {
           completedLogs = sortSectionIds(completedLogs);
 
           // console.log('仅保留已经上过课的 json 数组');
-          // console.log(pastItemsOnlyPlanDetail);
+          // console.log(pastItemsOnlyPlanDetail[0]);
           // console.log('已完成日志填写的 json 数组');
           // console.log(completedLogs);
           // 继续清洗只保留了上过课的日志详情列表，将已经填写过的日志剔除
@@ -198,7 +226,7 @@ class MyCurriPlanService extends Service {
           item.courseName = planIds.courseName;
         });
 
-        console.log(index, cleanedData.length);
+        // console.log(index, cleanedData.length);
         allCurriDetails.push(...cleanedData);
 
         // break;
@@ -519,6 +547,97 @@ class MyCurriPlanService extends Service {
     }
   }
 
+  // 第五步：把计划保存到校园网, 参数太多了，就不直接析构了
+  async submitTeachingLog(teachingLogInput) {
+    const { teachingLogData, JSESSIONID_A, token } = teachingLogInput;
+
+    const templateData = {
+      absenceList: [],
+      teaching_class_id: '',
+      teaching_date: '',
+      week_number: '',
+      day_of_week: '',
+      listening_teacher_id: '',
+      guidance_teacher_id: '',
+      listening_teacher_name: '',
+      lesson_hours: null,
+      minSectionId: '',
+      course_content: '',
+      homework_assignment: '',
+      topic_record: '',
+      section_id: '',
+      section_name: '节',
+      journal_type: '',
+      student_number: '',
+      shift: '',
+      problem_and_solve: '',
+      complete_and_summary: '',
+      discipline_situation: '',
+      security_and_maintain: '',
+      lecture_plan_detail_id: '',
+      lecture_journal_detail_id: '',
+      production_project_title: '',
+      lecture_lessons: 0,
+      training_lessons: 0,
+      example_lessons: 0,
+      production_name: '',
+      production_plan_num: 0,
+      production_qualified_num: 0,
+      production_back_num: 0,
+      production_waste_num: 0,
+    };
+
+    const completeTeachingLogData = {};
+    for (const key in templateData) {
+      completeTeachingLogData[key] = teachingLogData.hasOwnProperty(key) ? teachingLogData[key] : templateData[key];
+    }
+    // console.log(completeTeachingLogData);
+    // console.log(JSESSIONID_A, token);
+
+    const winTemp = `${Math.floor(Math.random() * 100000)}.${(Math.random()).toFixed(13).slice(2)}`;
+    const saveLectureJournalDetailUrl = `http://2.46.215.2:18000/jgyx-ui/jgyx/educationaffairsmgmt/teachingdailymgmt/lectureJournalDetail.action?frameControlSubmitFunction=saveLectureJournalDetail&winTemp=${winTemp}`;
+
+    // 设定请求头
+    const headers = {
+      Accept: 'application/json, text/plain, */*',
+      'Accept-Encoding': 'gzip, deflate',
+      'Accept-Language': 'en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5',
+      Authorization: `Bearer ${token}`,
+      // 'Content-Length': '24',
+      'Content-Type': 'application/json;charset=UTF-8',
+      Cookie: `SzmeSite=None; JSESSIONID_A=${JSESSIONID_A}`,
+      DNT: '1',
+      Host: '2.46.215.2:18000',
+      Origin: 'http://2.46.215.2:18000',
+      'Proxy-Connection': 'keep-alive',
+      Referer: 'http://2.46.215.2:18000/jgyx-ui/CMU09/CMU090201/index',
+      'Service-Type': 'Microservices',
+      'User-Agent': this.ctx.request.headers['user-agent'],
+    };
+
+    try {
+      // 加密 payload
+      const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(completeTeachingLogData);
+
+      const response = await this.ctx.curl(saveLectureJournalDetailUrl, {
+        method: 'POST',
+        headers, // 设置请求头
+        data: payload, // 请求体内容
+        dataType: 'string', // 设置返回数据类型为 JSON
+        // withCredentials: true, // 发送凭证（Cookie）
+      });
+
+      // 解密 response
+      const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
+      if (!data.success) {
+        console.log(data);
+      }
+      return data.data;
+    } catch (error) {
+      this.ctx.logger.error('提交日志出错:', error.message);
+      throw error;
+    }
+  }
 }
 
 module.exports = MyCurriPlanService;

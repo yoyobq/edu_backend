@@ -13,4 +13,11 @@ module.exports = {
       return res;
     },
   },
+
+  Mutation: {
+    sstsSubmitTeachingLog: async (_, { input }, ctx) => {
+      const res = await ctx.connector.sstsSpider.submitTeachingLog(input);
+      return res;
+    },
+  },
 };
