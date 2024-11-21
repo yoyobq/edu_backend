@@ -136,6 +136,7 @@ module.exports = appInfo => {
     // 'errorHandler',
     'validateHandler',
     'graphqlResponseHandler', // 正常引用中间件名称
+    'sstsResponseHandler',
     'graphql',
   ];
   // middleware: [ 'errorHandler', 'validateHandler' ],

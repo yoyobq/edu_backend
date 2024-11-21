@@ -256,7 +256,7 @@ class MyCurriPlanService extends Service {
 
       return curriPlan;
     } catch (error) {
-      console.log('出错');
+      console.log('getCurriPlanSSTS 出错');
       console.log(error);
     }
 
@@ -331,6 +331,7 @@ class MyCurriPlanService extends Service {
         data: payload, // 请求体内容
         dataType: 'string', // 设置返回数据类型为 JSON
         // withCredentials: true, // 发送凭证（Cookie）
+        timeout: 10000,
       });
 
       const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
@@ -393,6 +394,7 @@ class MyCurriPlanService extends Service {
         data: payload, // 请求体内容
         dataType: 'string', // 设置返回数据类型为 JSON
         // withCredentials: true, // 发送凭证（Cookie）
+        timeout: 10000,
       });
 
       // 解密 response
@@ -466,6 +468,7 @@ class MyCurriPlanService extends Service {
         data: payload, // 请求体内容
         dataType: 'string', // 设置返回数据类型为 JSON
         // withCredentials: true, // 发送凭证（Cookie）
+        timeout: 10000,
       });
 
       const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
@@ -529,6 +532,7 @@ class MyCurriPlanService extends Service {
         data: payload, // 请求体内容
         dataType: 'string', // 设置返回数据类型为 JSON
         // withCredentials: true, // 发送凭证（Cookie）
+        timeout: 10000,
       });
 
       // 解密 response
@@ -550,6 +554,7 @@ class MyCurriPlanService extends Service {
   // 第五步：把计划保存到校园网, 参数太多了，就不直接析构了
   async submitTeachingLog(teachingLogInput) {
     const { teachingLogData, JSESSIONID_A, token } = teachingLogInput;
+    console.log(teachingLogInput);
 
     const templateData = {
       absenceList: [],
@@ -625,11 +630,14 @@ class MyCurriPlanService extends Service {
         data: payload, // 请求体内容
         dataType: 'string', // 设置返回数据类型为 JSON
         // withCredentials: true, // 发送凭证（Cookie）
+        timeout: 10000,
       });
 
       // 解密 response
       const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
+      // console.log(data);
       if (!data.success) {
+        console.log('-----本次查询出错----response.data 数据为-------');
         console.log(data);
       }
       return data.data;

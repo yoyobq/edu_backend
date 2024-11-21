@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+const { GraphQLError } = require('graphql');
 
 class MyLoginService extends Service {
 
@@ -47,16 +48,17 @@ class MyLoginService extends Service {
 
       // 登录请求的负载数据
       const payload = await this.ctx.service.common.sstsCipher.encryptData(password, plainTextData);
-      console.log(typeof payload);
-      console.log(payload);
-      console.log(payload.length);
+      // console.log(typeof payload);
+      // console.log(payload);
+      // console.log(payload.length);
 
       const response = await this.ctx.curl(loginUrlCurl, {
         method: 'POST',
         data: payload, // 请求体内容
         headers, // 自定义请求头
         dataType: 'string', // 设置返回数据类型为
-        withCredentials: true, // 开启跨域时发送凭证
+        timeout: 10000,
+        // withCredentials: true, // 开启跨域时发送凭证
       });
 
       const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
@@ -125,7 +127,12 @@ class MyLoginService extends Service {
 
       switch (data.code) {
         case 400:
-        default: this.ctx.throw(400, data.msg);
+        default: throw new GraphQLError(`校园网反馈错误：${data.msg}`, {
+          extensions: {
+            code: 'SSTS_SUCCESS_ERROR',
+            showType: 2,
+          },
+        });
       }
     } catch (error) {
       this.ctx.logger.error('登录请求失败:', error.message);
@@ -232,6 +239,7 @@ class MyLoginService extends Service {
         headers,
         dataType: 'string',
         withCredentials: true,
+        timeout: 10000,
       });
 
       const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
@@ -242,7 +250,15 @@ class MyLoginService extends Service {
         return data.data.token;
       }
 
-      this.ctx.throw();
+      switch (data.code) {
+        case 400:
+        default: throw new GraphQLError(`校园网反馈错误：${data.msg}`, {
+          extensions: {
+            code: 'SSTS_SUCCESS_ERROR',
+            showType: 2,
+          },
+        });
+      }
     } catch (error) {
       this.ctx.logger.error('refresh token 失败:', error.message);
       throw error;
@@ -297,6 +313,7 @@ class MyLoginService extends Service {
         headers,
         dataType: 'string',
         withCredentials: true,
+        timeout: 10000,
       });
       console.log(response.headers['set-cookie']);
       console.log(response);
