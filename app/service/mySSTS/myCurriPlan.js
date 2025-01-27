@@ -331,7 +331,7 @@ class MyCurriPlanService extends Service {
         data: payload, // 请求体内容
         dataType: 'string', // 设置返回数据类型为 JSON
         // withCredentials: true, // 发送凭证（Cookie）
-        timeout: 10000,
+        timeout: 30000,
       });
 
       const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
@@ -394,7 +394,7 @@ class MyCurriPlanService extends Service {
         data: payload, // 请求体内容
         dataType: 'string', // 设置返回数据类型为 JSON
         // withCredentials: true, // 发送凭证（Cookie）
-        timeout: 10000,
+        timeout: 30000,
       });
 
       // 解密 response
@@ -468,7 +468,7 @@ class MyCurriPlanService extends Service {
         data: payload, // 请求体内容
         dataType: 'string', // 设置返回数据类型为 JSON
         // withCredentials: true, // 发送凭证（Cookie）
-        timeout: 10000,
+        timeout: 30000,
       });
 
       const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
@@ -532,7 +532,7 @@ class MyCurriPlanService extends Service {
         data: payload, // 请求体内容
         dataType: 'string', // 设置返回数据类型为 JSON
         // withCredentials: true, // 发送凭证（Cookie）
-        timeout: 10000,
+        timeout: 30000,
       });
 
       // 解密 response
@@ -630,7 +630,7 @@ class MyCurriPlanService extends Service {
         data: payload, // 请求体内容
         dataType: 'string', // 设置返回数据类型为 JSON
         // withCredentials: true, // 发送凭证（Cookie）
-        timeout: 10000,
+        timeout: 30000,
       });
 
       // 解密 response

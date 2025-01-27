@@ -21,10 +21,10 @@ module.exports = () => {
       return;
     }
 
-    console.log('-----本次查询出错的 Response.data 数据为-------');
+    console.log('-----本次查询出错的 Request.bod 及 Response.data 数据为-------');
+    console.log(ctx.request.body);
     console.log(response.data);
     // 后台抛出的错误 response.data 示例
     // { code: 400, msg: '用户名密码错！', success: false }
-    // {
   };
 };
