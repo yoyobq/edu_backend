@@ -48,7 +48,9 @@ module.exports = () => {
     await next();
     if (isGqlQuery) {
       const response = JSON.parse(ctx.body);
-      // console.log(response);
+      const currentTime = new Date().toLocaleTimeString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' });
+      console.log(`[${currentTime}]-------GraphQL 中间件拦截查询结果-------`);
+      console.log(response);
       // 在控制台输出错误，并记录到日志
       if (response.errors) {
         // 生成标准结构的错误信息
