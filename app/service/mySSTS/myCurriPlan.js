@@ -256,76 +256,79 @@ class MyCurriPlanService extends Service {
 
       return curriPlan;
     } catch (error) {
-      console.log('getCurriPlanSSTS 出错');
-      console.log(error);
+      // 上述操作的任何一步出错都会被这里收纳
+      this.ctx.throw(error);
     }
 
-    return false;
+    // 这个 return 不会被访问，仅保留做若有后续修改必要的提示
+    // return false;
   }
 
   // 第一步: 获取计划列表
   async getCurriPlanListSSTS({ JSESSIONID_A, userId, token }) {
     // console.log(JSESSIONID_A, userId);
-    try {
-      // 教务系统需要单独的 token
-      // eslint-disable-next-line no-unused-vars
-      // const jiaoWuToken = await this.ctx.service.mySSTS.myLogin.getRefreshToken({ token, JSESSIONID_A, refreshToken });
-      // 一个新的后缀形式 f7bd74325.472074168508
-      // 生成 8 位 16 进制随机字符串
-      const randomHex = Array.from({ length: 8 }, () =>
-        Math.floor(Math.random() * 16).toString(16)
-      ).join('');
+    // 教务系统需要单独的 token
+    // eslint-disable-next-line no-unused-vars
+    // const jiaoWuToken = await this.ctx.service.mySSTS.myLogin.getRefreshToken({ token, JSESSIONID_A, refreshToken });
+    // 一个新的后缀形式 f7bd74325.472074168508
+    // 生成 8 位 16 进制随机字符串
+    const randomHex = Array.from({ length: 8 }, () =>
+      Math.floor(Math.random() * 16).toString(16)
+    ).join('');
       // 生成 0 到 1 之间的随机浮点数字符串，并截取小数点后 13 位
-      const randomFloat = Math.random().toFixed(13).slice(2); // slice(1) 移除前面的 "0"
-      const url = `http://2.46.215.2:18000/jgyx-ui/jgyx/frame/component/pagegrid/pagegrid.action?frameControlSubmitFunction=query&winTemp=Q_EA_Lecture_Plan_Edit${randomHex}.${randomFloat}`;
+    const randomFloat = Math.random().toFixed(13).slice(2); // slice(1) 移除前面的 "0"
+    const url = `http://2.46.215.2:18000/jgyx-ui/jgyx/frame/component/pagegrid/pagegrid.action?frameControlSubmitFunction=query&winTemp=Q_EA_Lecture_Plan_Edit${randomHex}.${randomFloat}`;
 
-      // 设定请求头
-      const headers = {
-        Accept: 'text/plain, */*; q=0.01',
-        'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5',
-        Authorization: `Bearer ${token}`,
-        'Content-Length': '320',
-        'Content-Type': 'application/json;charset=UTF-8',
-        // 试验证明 SzmeSite=None; SzmeSite=None; 无意义，此处留作参考
-        Cookie: `SzmeSite=None; SzmeSite=None; JSESSIONID_A=${JSESSIONID_A}`,
-        DNT: '1',
-        Host: '2.46.215.2:18000',
-        Origin: 'http://2.46.215.2:18000',
-        'Proxy-Connection': 'keep-alive',
-        Referer: 'http://2.46.215.2:18000/jgyx-ui/EA09/EA0901/EA090102',
-        'Service-Type': 'Microservices',
-        'User-Agent': this.ctx.request.headers['user-agent'],
-      };
+    // 设定请求头
+    const headers = {
+      Accept: 'text/plain, */*; q=0.01',
+      'Accept-Encoding': 'gzip, deflate',
+      'Accept-Language': 'en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5',
+      Authorization: `Bearer ${token}`,
+      'Content-Length': '320',
+      'Content-Type': 'application/json;charset=UTF-8',
+      // 试验证明 SzmeSite=None; SzmeSite=None; 无意义，此处留作参考
+      Cookie: `SzmeSite=None; SzmeSite=None; JSESSIONID_A=${JSESSIONID_A}`,
+      DNT: '1',
+      Host: '2.46.215.2:18000',
+      Origin: 'http://2.46.215.2:18000',
+      'Proxy-Connection': 'keep-alive',
+      Referer: 'http://2.46.215.2:18000/jgyx-ui/EA09/EA0901/EA090102',
+      'Service-Type': 'Microservices',
+      'User-Agent': this.ctx.request.headers['user-agent'],
+    };
       // console.log(userId);
       // 加密前的 payload 信息
-      const plainTextData = {
-        take: 100,
-        skip: 0,
-        page: 1,
-        pageSize: 100,
-        group: [],
-        // 可笑，这个字段是无效的
-        queryNo: 'Q_EA_Lecture_Plan_Edit',
-        queryWindow: '1',
-        connectId: '1',
-        whereParams: {
-          number: '1',
-          userId,
-          school_year: '2024',
-          semester: '1',
-          orgid: '',
-          course_id: '',
-        },
-      };
+    const plainTextData = {
+      take: 100,
+      skip: 0,
+      page: 1,
+      pageSize: 100,
+      group: [],
+      // 可笑，这个字段是无效的
+      queryNo: 'Q_EA_Lecture_Plan_Edit',
+      queryWindow: '1',
+      connectId: '1',
+      whereParams: {
+        number: '1',
+        userId,
+        school_year: '2024',
+        semester: '2',
+        orgid: '',
+        course_id: '',
+      },
+    };
       // console.log(plainTextData);
       // 加密 payload
-      const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(plainTextData);
-      // console.log(payload);
-      // const payload2 = 'hTcOK7xIDf4AKm1YZzIgjScs91EN0Ry5DOLrTDVQleiMycZKiOcymG85digViykkHomhpIW4gbmG1VinPEOZcXZtY/A0LK2HhXavtYK2YkunidQ3uteIYNhFeQJsl6E587vot4y5H5cp/w5ouWQMCCllI2MmewFV/FSjb0vA3qEF1KENZ3Igi8qATI7keV4rKp9vpJ+2t6+htprUDHVkFdOE8EwULaA2tURvLPgb40ZzViJN+eWReT1+gYt4G6YnTn9ydyJRK6W8lpdi6shI5/OomMkKqbPcmSA8tS/T2nMzIDjXhHpAAzl0BvNi9U96';
-      // console.log(payload2);
+    const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(plainTextData);
+    // console.log(payload);
+    // const payload2 = 'hTcOK7xIDf4AKm1YZzIgjScs91EN0Ry5DOLrTDVQleiMycZKiOcymG85digViykkHomhpIW4gbmG1VinPEOZcXZtY/A0LK2HhXavtYK2YkunidQ3uteIYNhFeQJsl6E587vot4y5H5cp/w5ouWQMCCllI2MmewFV/FSjb0vA3qEF1KENZ3Igi8qATI7keV4rKp9vpJ+2t6+htprUDHVkFdOE8EwULaA2tURvLPgb40ZzViJN+eWReT1+gYt4G6YnTn9ydyJRK6W8lpdi6shI5/OomMkKqbPcmSA8tS/T2nMzIDjXhHpAAzl0BvNi9U96';
+    // console.log(payload2);
+
+    let response = {};
+    try {
       // 发送请求
-      const response = await this.ctx.curl(url, {
+      response = await this.ctx.curl(url, {
         method: 'POST',
         headers, // 设置请求头
         data: payload, // 请求体内容
@@ -333,13 +336,30 @@ class MyCurriPlanService extends Service {
         // withCredentials: true, // 发送凭证（Cookie）
         timeout: 30000,
       });
-
-      const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
-      return data.data;
     } catch (error) {
       // this.ctx.logger.error('token 刷新:', error.message);
       throw error;
     }
+
+    // response 是校园网的反馈
+    // decodedData 是 reponse 中有效数据解码后的内容
+    const decodedData = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
+
+    // 此处的错误不能像登录功能一样，简单的用 decodedCode.code  来判断是否成功反馈
+    // 因为反馈信息中根本不包含这一项，这是由于校园网没有一套统一的错误报告和处理流程造成的
+    // 我这里选择用 decodedData.data[] 这个保存了教学计划信息的数组是否存在
+    // 存在的话，长度是否大于 0 来判断返回是否正确
+
+    if (decodedData.data.length < 1) {
+      // this.ctx.throw(500, '教学计划为空或学期设置有误，计划获取失败');
+      const errorHandler = this.ctx.service.mySSTS.errorHandler;
+      // 解码后的数据中，也会包含错误，这就是一个==解码后==的错误示例
+      const errorResponse = { code: 400, msg: '教学计划为空或学期设置有误，获取计划列表失败' };
+      // 但也要考虑不符合上述示例的校园网错误反馈
+      await errorHandler.handleScrapingError(errorResponse);
+    }
+
+    return decodedData.data;
   }
 
   // 第二步： 获取计划详情
@@ -384,11 +404,11 @@ class MyCurriPlanService extends Service {
       },
     };
 
+    // 加密 payload
+    const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(plainTextData);
+    let response = {};
     try {
-      // 加密 payload
-      const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(plainTextData);
-
-      const response = await this.ctx.curl(url, {
+      response = await this.ctx.curl(url, {
         method: 'POST',
         headers, // 设置请求头
         data: payload, // 请求体内容
@@ -396,21 +416,25 @@ class MyCurriPlanService extends Service {
         // withCredentials: true, // 发送凭证（Cookie）
         timeout: 30000,
       });
-
-      // 解密 response
-      const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
-
-      // 由于这个函数会在循环中执行
-      // 为避免意外并发影响校园网服务器工作，
-      // 每次成功查询数据后，随机延时 100 到 200 毫秒
-      const delay = Math.floor(100 + Math.random() * 100);
-      await new Promise(resolve => setTimeout(resolve, delay));
-
-      return data.data;
     } catch (error) {
-      this.ctx.logger.error('获取日志详情报错:', error.message);
+      // 仅反应网络或服务器错误
       throw error;
     }
+
+    // 解密 response
+    const decodedData = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
+
+    // 由于这个函数会在循环中执行
+    // 为避免意外并发影响校园网服务器工作，
+    // 每次成功查询数据后，随机延时 100 到 200 毫秒
+    const delay = Math.floor(100 + Math.random() * 100);
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    // 此处应有更多的健壮性设计，如读取日志详情从校园网端返回了非正常数据的处理
+    // 但由于校园网端从未在此处返回过非正常数据，样本太少，暂时留空
+    // this.ctx.logger.error('获取日志详情报错:', error.message);
+
+    return decodedData.data;
   }
 
   // 第三步：获取可填写日志概览
@@ -456,7 +480,7 @@ class MyCurriPlanService extends Service {
         whereParams: {
           userId,
           school_year: '2024',
-          semester: '1',
+          semester: '2',
         },
       };
 
@@ -620,11 +644,12 @@ class MyCurriPlanService extends Service {
       'User-Agent': this.ctx.request.headers['user-agent'],
     };
 
-    try {
-      // 加密 payload
-      const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(completeTeachingLogData);
+    // 加密 payload
+    const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(completeTeachingLogData);
 
-      const response = await this.ctx.curl(saveLectureJournalDetailUrl, {
+    let response = {};
+    try {
+      response = await this.ctx.curl(saveLectureJournalDetailUrl, {
         method: 'POST',
         headers, // 设置请求头
         data: payload, // 请求体内容
@@ -632,19 +657,28 @@ class MyCurriPlanService extends Service {
         // withCredentials: true, // 发送凭证（Cookie）
         timeout: 30000,
       });
-
-      // 解密 response
-      const data = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
-      // console.log(data);
-      if (!data.success) {
-        console.log('-----本次查询出错----response.data 数据为-------');
-        console.log(data);
-      }
-      return data.data;
     } catch (error) {
-      this.ctx.logger.error('提交日志出错:', error.message);
+      // this.ctx.logger.error('提交日志出错:', error.message);
+      // 仅处理服务器或网络连接出错
       throw error;
     }
+
+    // 解密 response
+    const decodedData = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
+
+    const { success, msg } = decodedData;
+    const errorResponse = msg ?
+      decodedData :
+      { code: 400, msg: '教学日志提交时出错，成因复杂，请联系管理员排错。', success: false };
+
+    if (!success) {
+      console.log('---------教学日志提交出错---------');
+      const errorHandler = this.ctx.service.mySSTS.errorHandler;
+      await errorHandler.handleScrapingError(errorResponse);
+    }
+
+    return decodedData.data;
+
   }
 }
 
