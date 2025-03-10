@@ -11,7 +11,7 @@ describe('Test plan_calendar_events Model', () => {
   });
 
   it('是否能创建校历事件 calendar event', async () => {
-    event = await ctx.model.Plan.CalendarEvents.create({
+    event = await ctx.model.Plan.CalendarEvent.create({
       semesterId: 1,
       topic: '期中考试',
       date: new Date('2025-04-15'),
@@ -36,8 +36,8 @@ describe('Test plan_calendar_events Model', () => {
 
   it('是否能删除事件', async () => {
     const id = event.id;
-    await ctx.model.Plan.CalendarEvents.destroy({ where: { id } });
-    const deletedEvent = await ctx.model.Plan.CalendarEvents.findByPk(id);
+    await ctx.model.Plan.CalendarEvent.destroy({ where: { id } });
+    const deletedEvent = await ctx.model.Plan.CalendarEvent.findByPk(id);
     assert.strictEqual(deletedEvent, null);
   });
 });

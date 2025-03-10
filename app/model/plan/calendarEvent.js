@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * @file calendarEvents.js
+ * @file calendarEvent.js
  * @description 校历事件表的 Sequelize 模型。
  *
  * 主要功能:
@@ -9,13 +9,23 @@
  * - 记录修改时间和修改人。
  * - 提供索引优化查询。
  *
- * @module model/plan/calendarEvents
+ * ## 关于索引定义
+ * Sequelize 允许在模型中定义索引，以确保数据库结构与代码逻辑保持一致。
+ * 这样可以避免数据库迁移时索引丢失，并提升查询优化效果。
+ * 即使索引已在数据库中手动创建，仍建议在 Sequelize 中定义，确保:
+ * - **数据库 & 代码保持一致**，防止索引丢失。
+ * - **支持 Sequelize `sync()` & 迁移机制**，避免手动维护索引。
+ * - **提高查询优化效果**，让 Sequelize 更智能地利用索引。
+ * - **保证多数据库兼容**，适配 MySQL、PostgreSQL、SQLite 等不同数据库。
+ * 若数据库由 DBA 维护且不会变更，手动创建索引也是可行的。
+ *
+ * @module model/plan/calendarEvent
  */
 
 module.exports = app => {
   const { INTEGER, STRING, ENUM, DATE, NOW } = app.Sequelize;
 
-  const CalendarEvents = app.model.define('plan_calendar_events', {
+  const CalendarEvent = app.model.define('plan_calendar_events', {
     id: {
       type: INTEGER,
       primaryKey: true,
@@ -92,6 +102,7 @@ module.exports = app => {
     },
   }, {
     timestamps: true, // 启用 createdAt 和 updatedAt
+    freezeTableName: true, // 禁止 Sequelize 自动复数化表名
     indexes: [
       {
         name: 'idx_semester_date',
@@ -111,5 +122,5 @@ module.exports = app => {
     },
   });
 
-  return CalendarEvents;
+  return CalendarEvent;
 };
