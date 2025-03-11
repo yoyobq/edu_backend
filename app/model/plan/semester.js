@@ -15,7 +15,8 @@
 module.exports = app => {
   const { INTEGER, STRING, DATE, TINYINT } = app.Sequelize;
 
-  const Semester = app.model.define('plan_semesters', {
+  const tbn = 'plan_semesters';
+  const Semester = app.model.define(tbn, {
     id: {
       type: INTEGER,
       primaryKey: true,
@@ -69,6 +70,7 @@ module.exports = app => {
       comment: '是否为当前学期 (Is Current Semester)',
     },
   }, {
+    // tableName: tbn,
     timestamps: false, // 该表不需要 createdAt 和 updatedAt
     freezeTableName: true, // 禁止 Sequelize 自动复数化表名，确保使用 plan_semesters
   });
