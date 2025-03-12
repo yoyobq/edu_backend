@@ -49,6 +49,7 @@ describe('测试 PlanCourseSchedule 与 PlanCourseSlot 关联', () => {
   it('应当成功创建多个课程时间安排', async () => {
     slot1 = await CourseSlot.create({
       courseScheduleId: schedule.id,
+      staffId: schedule.staffId,
       dayOfWeek: 2,
       periodStart: 1,
       periodEnd: 2,
@@ -57,6 +58,7 @@ describe('测试 PlanCourseSchedule 与 PlanCourseSlot 关联', () => {
 
     slot2 = await CourseSlot.create({
       courseScheduleId: schedule.id,
+      staffId: schedule.staffId,
       dayOfWeek: 4,
       periodStart: 3,
       periodEnd: 4,
