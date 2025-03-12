@@ -43,6 +43,12 @@ module.exports = app => {
       field: 'course_schedule_id',
       comment: '关联主表 course_schedule 的 ID',
     },
+    staffId: {
+      type: INTEGER.UNSIGNED,
+      allowNull: false,
+      field: 'staff_id',
+      comment: '关联 staff 表的 ID',
+    },
     dayOfWeek: {
       type: TINYINT.UNSIGNED,
       allowNull: false,
@@ -77,9 +83,9 @@ module.exports = app => {
   // 定义与课程主表(plan_course_schedule)的关联关系
   CourseSlot.associate = function() {
     app.model.Plan.CourseSlot.belongsTo(app.model.Plan.CourseSchedule, {
-      // 外键，对应课程主表的主键，由于 Sequelize 会管理表之间的关系，实际上数据库中的外键设置非必要
-      // 即：由业务逻辑管理数据, 故删除外键
-      // foreignKey: 'course_schedule_id',
+      // foreignKey 只是告诉 Sequelize，在关联查询时，它应该使用哪个字段来进行数据关联。
+      // 并不意味着数据库里需要建立这个外键
+      foreignKey: 'course_schedule_id',
       targetKey: 'id', // 目标表（CourseSchedule）中被外键关联的字段，默认是 id，所以此处非必要
       as: 'courseSchedule',
     });
