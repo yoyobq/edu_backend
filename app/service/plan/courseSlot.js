@@ -37,6 +37,16 @@ class CourseSlotService extends Service {
 
     return await this.ctx.model.Plan.CourseSlot.findAll(queryOptions);
   }
+
+  /**
+   * 创建课程时间安排
+   * @param {Object} param - 参数对象
+   * @param {Object} param.input - 创建 CourseSlot 需要的数据
+   * @return {Promise<object>} - 返回新创建的 CourseSlot
+   */
+  async createCourseSlot({ input }) {
+    return await this.ctx.model.Plan.CourseSlot.create(input);
+  }
 }
 
 module.exports = CourseSlotService;
