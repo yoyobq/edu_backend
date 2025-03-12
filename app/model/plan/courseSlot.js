@@ -68,20 +68,6 @@ module.exports = app => {
       field: 'week_type',
       comment: '单双周标识，all=每周，odd=单周，even=双周',
     },
-    createdAt: {
-      type: 'TIMESTAMP',
-      allowNull: true,
-      defaultValue: app.Sequelize.literal('CURRENT_TIMESTAMP'),
-      field: 'created_at',
-      comment: '记录创建时间，默认当前时间',
-    },
-    updatedAt: {
-      type: app.Sequelize.DATE,
-      allowNull: true,
-      defaultValue: app.Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'),
-      field: 'updated_at',
-      comment: '记录最后更新时间，每次修改都会更新',
-    },
   }, {
     timestamps: true, // 自动管理 createdAt 和 updatedAt 字段
     freezeTableName: true, // 禁止 Sequelize 自动修改表名
@@ -91,8 +77,10 @@ module.exports = app => {
   // 定义与课程主表(plan_course_schedule)的关联关系
   CourseSlot.associate = function() {
     app.model.Plan.CourseSlot.belongsTo(app.model.Plan.CourseSchedule, {
-      foreignKey: 'course_schedule_id', // 外键，对应课程主表的主键
-      targetKey: 'id',
+      // 外键，对应课程主表的主键，由于 Sequelize 会管理表之间的关系，实际上数据库中的外键设置非必要
+      // 即：由业务逻辑管理数据, 故删除外键
+      // foreignKey: 'course_schedule_id',
+      targetKey: 'id', // 目标表（CourseSchedule）中被外键关联的字段，默认是 id，所以此处非必要
       as: 'courseSchedule',
     });
   };

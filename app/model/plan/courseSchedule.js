@@ -115,10 +115,19 @@ module.exports = app => {
 
   CourseSchedule.associate = function() {
     app.model.Plan.CourseSchedule.hasOne(app.model.Ssts.CourseScheduleSourceMap, {
+      // foreignKey 只是告诉 Sequelize，在关联查询时，它应该使用哪个字段来进行数据关联。
+      // 并不意味着数据库里需要建立这个外键
       foreignKey: 'course_schedule_id',
       as: 'sourceMap',
       onDelete: 'CASCADE',
-      hooks: true,
+      hooks: true, // 确保 Sequelize 触发级联删除逻辑
+    });
+
+    app.model.Plan.CourseSchedule.hasMany(app.model.Plan.CourseSlot, {
+      foreignKey: 'course_schedule_id',
+      as: 'slots',
+      onDelete: 'CASCADE', // 删除课程表时，同时删除课程时间安排
+      hooks: true, // 确保 Sequelize 触发级联删除逻辑
     });
   };
 

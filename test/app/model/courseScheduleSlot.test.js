@@ -1,0 +1,94 @@
+'use strict';
+
+/**
+ * @file courseScheduleSlot.test.js
+ * @description 课程表 (PlanCourseSchedule) 与课程时间安排 (PlanCourseSlot) 的功能性测试。
+ *
+ * 主要测试内容：
+ * - 课程表的创建、查询、更新、删除。
+ * - 课程时间安排的创建、查询、更新、删除。
+ * - 课程表与时间安排的关联操作。
+ * - 级联删除测试 (删除课程表时，课程时间安排是否被删除)。
+ *
+ * @module test/app/model/courseScheduleSlot.test.js
+ */
+
+const { app, assert } = require('egg-mock/bootstrap');
+
+describe('测试 PlanCourseSchedule 与 PlanCourseSlot 关联', () => {
+  let ctx;
+  let CourseSchedule;
+  let CourseSlot;
+  let schedule;
+  let slot1,
+    slot2;
+
+  before(async () => {
+    ctx = app.mockContext();
+    CourseSchedule = ctx.model.Plan.CourseSchedule;
+    CourseSlot = ctx.model.Plan.CourseSlot;
+    assert(CourseSchedule, '课程表模型未正确加载');
+    assert(CourseSlot, '课程时间安排模型未正确加载');
+  });
+
+  it('应当成功创建新的课程表', async () => {
+    schedule = await CourseSchedule.create({
+      staffId: 101,
+      staffName: '张老师',
+      teachingClassName: '计算机科学1班',
+      semesterId: 1,
+      weekCount: 16,
+      weeklyHours: 4,
+      credits: 3,
+      isWil: 0,
+      courseCategory: '必修课',
+    });
+    assert(schedule.id, '课程表创建失败');
+  });
+
+  it('应当成功创建多个课程时间安排', async () => {
+    slot1 = await CourseSlot.create({
+      courseScheduleId: schedule.id,
+      dayOfWeek: 2,
+      periodStart: 1,
+      periodEnd: 2,
+      weekType: 'all',
+    });
+
+    slot2 = await CourseSlot.create({
+      courseScheduleId: schedule.id,
+      dayOfWeek: 4,
+      periodStart: 3,
+      periodEnd: 4,
+      weekType: 'odd',
+    });
+
+    assert(slot1.id, '课程时间安排 1 创建失败');
+    assert(slot2.id, '课程时间安排 2 创建失败');
+  });
+
+  it('应当成功查询课程表及其课程时间安排', async () => {
+    const fetchedSchedule = await CourseSchedule.findOne({
+      where: { id: schedule.id },
+      include: [{ model: CourseSlot, as: 'slots' }],
+    });
+    assert(fetchedSchedule, '未找到课程表');
+    assert(fetchedSchedule.slots.length === 2, '未找到所有相关的课程时间安排');
+  });
+
+  it('应当成功更新课程时间安排', async () => {
+    slot1.periodEnd = 3;
+    await slot1.save();
+    const updatedSlot = await CourseSlot.findByPk(slot1.id);
+    assert.strictEqual(updatedSlot.periodEnd, 3, '课程时间安排更新失败');
+  });
+
+  it('删除课程表后应当同时删除所有课程时间安排', async () => {
+    await schedule.destroy();
+    const deletedSchedule = await CourseSchedule.findByPk(schedule.id);
+    const remainingSlots = await CourseSlot.findAll({ where: { courseScheduleId: schedule.id } });
+
+    assert.strictEqual(deletedSchedule, null, '课程表未被删除');
+    assert.strictEqual(remainingSlots.length, 0, '课程时间安排未被级联删除');
+  });
+});
