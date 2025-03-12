@@ -34,4 +34,9 @@ describe('课程表 Service 测试', () => {
     const courseSchedules = await ctx.service.plan.courseSchedule.listCourseSchedules({ semesterId: 2, staffId: 2 });
     console.log('按学期和教师获取的课程表:', courseSchedules);
   });
+
+  it('应按学期获取课程表并包含 slots (semesterId = 2, includeSlots = true)', async () => {
+    const courseSchedules = await ctx.service.plan.courseSchedule.listCourseSchedules({ semesterId: 2, includeSlots: true });
+    console.log('按学期获取的课程表 (包含 slots):', JSON.stringify(courseSchedules, null, 2));
+  });
 });

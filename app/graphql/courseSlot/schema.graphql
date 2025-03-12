@@ -1,0 +1,63 @@
+"""
+CourseSlot 课程时间安排表。
+存储课程的具体时间安排信息，包括上课的星期、节次范围等。
+"""
+type CourseSlot {
+  id: Int!
+  courseScheduleId: Int!
+  staffId: Int!
+  dayOfWeek: Int!
+  periodStart: Int!
+  periodEnd: Int!
+  weekType: WeekType!
+  semesterId: Int
+
+  # 关联字段
+  courseSchedule: CourseSchedule
+}
+
+"""
+单双周类型。
+"""
+enum WeekType {
+  ALL   # 每周上课
+  ODD   # 单周上课
+  EVEN  # 双周上课
+}
+
+"""
+创建课程时间安排输入类型。
+"""
+input CreateCourseSlotInput {
+  courseScheduleId: Int!
+  staffId: Int!
+  dayOfWeek: Int!
+  periodStart: Int!
+  periodEnd: Int!
+  weekType: WeekType!
+  semesterId: Int
+}
+
+"""
+更新课程时间安排输入类型。
+"""
+input UpdateCourseSlotInput {
+  staffId: Int
+  dayOfWeek: Int
+  periodStart: Int
+  periodEnd: Int
+  weekType: WeekType
+  semesterId: Int
+}
+
+"""
+查询和变更类型。
+"""
+extend type Query {
+  getCourseSlot(id: Int!): CourseSlot
+  listCourseSlots(semesterId: Int, staffId: Int, dayOfWeek: Int): [CourseSlot]
+}
+
+extend type Mutation {
+  createCourseSlot(input: CreateCourseSlotInput!): CourseSlot!
+}
