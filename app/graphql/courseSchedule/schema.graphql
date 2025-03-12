@@ -1,0 +1,124 @@
+### CourseSchedule GraphQL Schema
+
+"""
+CourseSchedule 课程表主表。
+用于管理课程的基础信息，包括授课教师、教学班、学期等。
+"""
+type CourseSchedule {
+  id: Int!
+  staffId: Int!
+  staffName: String!
+  teachingClassName: String!
+  classroomId: Int
+  classroomName: String
+  courseId: Int
+  courseName: String
+  semesterId: Int!
+  weekCount: Int
+  weeklyHours: Int
+  credits: Int
+  isWil: Boolean!
+  courseCategory: CourseCategory!
+  weekNumberString: String
+
+  # 关联字段
+  slots: [CourseSlot]      # 课程时间安排（多对一）
+  sourceMap: CourseSourceMap  # 爬取数据映射（仅附属）
+}
+
+"""
+课程类别枚举类型。
+"""
+enum CourseCategory {
+  REQUIRED   # 必修课
+  ELECTIVE   # 选修课
+  CLUB       # 社团课
+  CLASS_MEETING # 班会课
+  OTHER      # 其他课程
+}
+
+"""
+课程数据爬取映射，仅作为 CourseSchedule 的附属数据。
+不提供独立查询。
+"""
+type CourseSourceMap {
+  id: Int!
+  courseScheduleId: Int
+  lecturePlanId: String!
+  courseId: String!
+  teacherInChargeId: String!
+  teachingClassId: String!
+  staffId: Int!
+  semesterId: Int!
+}
+
+"""
+课程时间安排表。
+"""
+type CourseSlot {
+  id: Int!
+  courseScheduleId: Int!
+  dayOfWeek: Int!
+  periodStart: Int!
+  periodEnd: Int!
+  weekType: WeekType!
+  staffId: Int! # 冗余字段，存储教师ID，优化查询
+
+  # 关联字段
+  courseSchedule: CourseSchedule
+}
+
+"""
+创建课程表输入类型。
+"""
+input CreateCourseScheduleInput {
+  staffId: Int!
+  staffName: String!
+  teachingClassName: String!
+  classroomId: Int
+  classroomName: String
+  courseId: Int
+  courseName: String
+  semesterId: Int!
+  weekCount: Int
+  weeklyHours: Int
+  credits: Int
+  isWil: Boolean!
+  courseCategory: CourseCategory!
+  weekNumberString: String
+}
+
+"""
+更新课程表输入类型。
+"""
+input UpdateCourseScheduleInput {
+  staffId: Int
+  staffName: String
+  teachingClassName: String
+  classroomId: Int
+  classroomName: String
+  courseId: Int
+  courseName: String
+  semesterId: Int
+  weekCount: Int
+  weeklyHours: Int
+  credits: Int
+  isWil: Boolean
+  courseCategory: CourseCategory
+  weekNumberString: String
+}
+
+"""
+查询和变更类型。
+"""
+extend type Query {
+  getCourseSchedule(id: Int!): CourseSchedule
+  # 在 GraphQL 里，参数默认是可选的，除非显式地标记它是 !,所以这三个变量可以按需提供
+  listCourseSchedules(semesterId: Int, staffId: Int, includeSlots: Boolean = false): [CourseSchedule]
+}
+
+extend type Mutation {
+  createCourseSchedule(input: CreateCourseScheduleInput!): CourseSchedule!
+  updateCourseSchedule(id: Int!, input: UpdateCourseScheduleInput!): CourseSchedule!
+  deleteCourseSchedule(id: Int!): Boolean!
+}
