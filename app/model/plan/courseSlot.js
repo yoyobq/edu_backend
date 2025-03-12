@@ -74,6 +74,12 @@ module.exports = app => {
       field: 'week_type',
       comment: '单双周标识，all=每周，odd=单周，even=双周',
     },
+    semesterId: {
+      type: INTEGER.UNSIGNED,
+      allowNull: false,
+      field: 'semester_id',
+      comment: '冗余数据，学期id',
+    },
   }, {
     timestamps: true, // 自动管理 createdAt 和 updatedAt 字段
     freezeTableName: true, // 禁止 Sequelize 自动修改表名
