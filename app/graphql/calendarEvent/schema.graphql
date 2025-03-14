@@ -1,0 +1,86 @@
+"""
+校历事件 (Calendar Event) 类型。
+用于存储学期相关的事件，如假期、考试、活动等。
+"""
+type CalendarEvent {
+  id: Int!
+  semesterId: Int!
+  topic: String!
+  date: String!
+  timeSlot: TimeSlot!
+  eventType: EventType!
+  originalDate: String
+  recordStatus: RecordStatus!
+  version: Int!
+  createdAt: String!
+  updatedAt: String!
+  updatedByAccoutId: Int
+}
+
+"""
+时间段枚举类型 (Time Slot)。
+"""
+enum TimeSlot {
+  ALL_DAY      # 全天
+  MORNING      # 上午
+  AFTERNOON    # 下午
+}
+
+"""
+事件类型枚举 (Event Type)。
+"""
+enum EventType {
+  HOLIDAY         # 假期
+  EXAM            # 考试
+  ACTIVITY        # 活动
+  HOLIDAY_MAKEUP  # 调休
+  WEEKDAY_SWAP    # 调课
+  SPORTS_MEET     # 运动会
+}
+
+"""
+记录状态 (Record Status)。
+"""
+enum RecordStatus {
+  ACTIVE            # 正常生效
+  ACTIVE_TENTATIVE  # 临时生效
+  EXPIRY            # 失效
+}
+
+"""
+创建校历事件输入类型。
+"""
+input CreateCalendarEventInput {
+  semesterId: Int!
+  topic: String!
+  date: String!
+  timeSlot: TimeSlot!
+  eventType: EventType!
+  originalDate: String
+  recordStatus: RecordStatus!
+  updatedByAccoutId: Int
+}
+
+"""
+更新校历事件输入类型。
+"""
+input UpdateCalendarEventInput {
+  topic: String
+  date: String
+  timeSlot: TimeSlot
+  eventType: EventType
+  originalDate: String
+  recordStatus: RecordStatus
+  updatedByAccoutId: Int
+}
+
+extend type Query {
+  getCalendarEvent(id: Int!): CalendarEvent
+  listCalendarEvents(semesterId: Int!): [CalendarEvent]
+}
+
+extend type Mutation {
+  createCalendarEvent(input: CreateCalendarEventInput!): CalendarEvent!
+  updateCalendarEvent(id: Int!, input: UpdateCalendarEventInput!): CalendarEvent!
+  deleteCalendarEvent(id: Int!): Boolean!
+}

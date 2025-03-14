@@ -47,11 +47,12 @@ class SemesterService extends Service {
 
   /**
    * 更新学期信息
-   * @param {number} id - 学期 ID
-   * @param {Object} input - 需要更新的字段
+   * @param {Object} param - 参数对象
+   * @param {number} param.id - 学期 ID
+   * @param {Object} param.input - 需要更新的字段
    * @return {Promise<Object|null>} - 返回更新后的学期对象
    */
-  async updateSemester(id, input) {
+  async updateSemester({ id, ...input }) {
     const semester = await this.ctx.model.Plan.Semester.findByPk(id);
     if (!semester) return null;
 
@@ -63,7 +64,7 @@ class SemesterService extends Service {
    * @param {number} id - 学期 ID
    * @return {Promise<boolean>} - 返回是否删除成功
    */
-  async deleteSemester(id) {
+  async deleteSemester({ id }) {
     const semester = await this.ctx.model.Plan.Semester.findByPk(id);
     if (!semester) return false;
 
