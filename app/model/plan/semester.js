@@ -13,7 +13,7 @@
  */
 
 module.exports = app => {
-  const { INTEGER, STRING, DATE, TINYINT } = app.Sequelize;
+  const { INTEGER, STRING, DATE, TINYINT, BOOLEAN } = app.Sequelize;
 
   const tbn = 'plan_semesters';
   const Semester = app.model.define(tbn, {
@@ -24,7 +24,7 @@ module.exports = app => {
       comment: '主键 (Primary Key)',
     },
     schoolYear: {
-      type: INTEGER,
+      type: INTEGER.UNSIGNED,
       allowNull: false,
       field: 'school_year',
       validate: {
@@ -34,7 +34,7 @@ module.exports = app => {
       comment: '学年',
     },
     termNumber: {
-      type: TINYINT,
+      type: TINYINT.UNSIGNED,
       allowNull: false,
       field: 'term_number',
       comment: '第一学期，第二学期',
@@ -63,7 +63,7 @@ module.exports = app => {
       comment: '结束日期 (End Date)',
     },
     isCurrent: {
-      type: TINYINT,
+      type: BOOLEAN,
       allowNull: false,
       defaultValue: 0,
       field: 'is_current',
@@ -73,6 +73,12 @@ module.exports = app => {
     // tableName: tbn,
     timestamps: false, // 该表不需要 createdAt 和 updatedAt
     freezeTableName: true, // 禁止 Sequelize 自动复数化表名，确保使用 plan_semesters
+    indexes: [
+      {
+        unique: true,
+        fields: [ 'school_year', 'term_number' ],
+      },
+    ],
   });
 
   return Semester;

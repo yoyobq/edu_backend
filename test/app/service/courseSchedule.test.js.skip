@@ -43,7 +43,7 @@ describe('课程表 Service: test/service/courseSchedule.test 测试', () => {
     const courseSchedule = await ctx.service.plan.courseSchedule.listCourseSchedules({ semesterId: 2, includeSourceMap: true });
     // console.log(courseSchedule);
     assert(courseSchedule, '应返回有效的课程表');
-    assert(typeof courseSchedule === 'object', '返回的课程表应是对象');
+    assert(Array.isArray(courseSchedule) && courseSchedule.every(item => typeof item === 'object' && item !== null), '返回的课程表应是对象数组');
     assert(courseSchedule[0].lecturePlanId, '应包含 sourceMap 数据字段 lecturePlanId');
     assert(courseSchedule[0].courseId, '应包含 sourceMap 数据字段 courseId');
   });
