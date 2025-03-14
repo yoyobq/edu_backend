@@ -27,11 +27,12 @@ module.exports = {
      * @param {number} [param.semesterId] - 学期 ID（可选）
      * @param {number} [param.staffId] - 教师 ID（可选）
      * @param {boolean} [param.includeSlots=false] - 是否加载课程时间安排 slots
+     * @param {Boolean} param.includeSourceMap - 是否加载 SSTS 爬取的 ID 信息
      * @param {Object} ctx - Egg.js 上下文对象
      * @return {Promise<Array>} - 返回 CourseSchedule 列表
      */
-    async listCourseSchedules(_, { semesterId, staffId, includeSlots = false }, ctx) {
-      return await ctx.connector.courseSchedule.listCourseSchedules(semesterId, staffId, includeSlots);
+    async listCourseSchedules(_, { semesterId, staffId, includeSlots = false, includeSourceMap = false }, ctx) {
+      return await ctx.connector.courseSchedule.listCourseSchedules(semesterId, staffId, includeSlots, includeSourceMap);
     },
   },
 

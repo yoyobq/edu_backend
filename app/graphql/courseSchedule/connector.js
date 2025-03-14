@@ -28,10 +28,11 @@ class CourseScheduleConnector {
    * @param {number} [param.semesterId] - 学期 ID（可选）
    * @param {number} [param.staffId] - 教师 ID（可选）
    * @param {boolean} [param.includeSlots=false] - 是否加载课程时间安排 slots
+   * @param {boolean} param.includeSourceMap - 是否加载 SSTS 爬取的 ID 信息
    * @return {Promise<Array>} - 返回课程表列表
    */
-  async listCourseSchedules({ semesterId, staffId, includeSlots = false }) {
-    return await this.service.listCourseSchedules({ semesterId, staffId, includeSlots });
+  async listCourseSchedules({ semesterId, staffId, includeSlots = false, includeSourceMap = false }) {
+    return await this.service.listCourseSchedules({ semesterId, staffId, includeSlots, includeSourceMap });
   }
 
   /**

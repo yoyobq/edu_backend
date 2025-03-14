@@ -21,9 +21,14 @@ type CourseSchedule {
   courseCategory: CourseCategory!
   weekNumberString: String
 
+  # sourceMap: CourseSourceMap  # 爬取数据映射（仅附属）
+  # 展开 SourceMap 字段
+  lecturePlanId: String
+  teacherInChargeId: String
+  teachingClassId: String
   # 关联字段
   slots: [CourseSlot]      # 课程时间安排（多对一）
-  sourceMap: CourseSourceMap  # 爬取数据映射（仅附属）
+
 }
 
 """
@@ -48,8 +53,6 @@ type CourseSourceMap {
   courseId: String!
   teacherInChargeId: String!
   teachingClassId: String!
-  staffId: Int!
-  semesterId: Int!
 }
 
 """
