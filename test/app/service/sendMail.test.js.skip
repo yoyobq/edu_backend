@@ -30,25 +30,25 @@ describe('service/common/sendMail.js', () => {
     ctx = app.mockContext();
   });
 
-  // it('实际发送邮件给 hotmail 邮箱', async () => {
-  //   const to = 'yoyobq@hotmail.com';
-  //   const subject = '测试邮件';
-  //   const content = '这是一封测试邮件，请勿回复。';
+  it('实际发送邮件给 hotmail 邮箱', async () => {
+    const to = 'yoyobq@hotmail.com';
+    const subject = '测试邮件';
+    const content = '这是一封测试邮件，请勿回复。';
 
-  //   const sendResponse = await ctx.service.common.sendMail.sendEmail(to, subject, content);
-  //   assert(sendResponse);
-  //   assert(sendResponse.messageId);
-  // });
+    const sendResponse = await ctx.service.common.sendMail.sendEmail(to, subject, content);
+    assert(sendResponse);
+    assert(sendResponse.messageId);
+  });
 
-  // it('实际发送邮件给 foxmail 邮箱', async () => {
-  //   const to = 'yoyobq@foxmail.com';
-  //   const subject = '测试邮件';
-  //   const content = '这是一封测试邮件，请勿回复。';
+  it('实际发送邮件给 foxmail 邮箱', async () => {
+    const to = 'yoyobq@foxmail.com';
+    const subject = '测试邮件';
+    const content = '这是一封测试邮件，请勿回复。';
 
-  //   const sendResponse = await ctx.service.common.sendMail.sendEmail(to, subject, content);
-  //   assert(sendResponse);
-  //   assert(sendResponse.messageId);
-  // });
+    const sendResponse = await ctx.service.common.sendMail.sendEmail(to, subject, content);
+    assert(sendResponse);
+    assert(sendResponse.messageId);
+  });
 
   it('模拟发送给不存在的模拟邮箱，若要实际发送邮件，请到测试文件取消部分注释', async () => {
     const to = 'mock@mock.mm';

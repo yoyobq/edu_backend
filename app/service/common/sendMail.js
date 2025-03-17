@@ -38,7 +38,7 @@ class SendMail extends Service {
     });
 
     const mailOptions = {
-      from: 'no-reply@ssts.fun',
+      from: 'no-reply@ssts.host',
       to,
       subject,
       text: content,
