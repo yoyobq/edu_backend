@@ -1,7 +1,5 @@
-"""
-校历事件 (Calendar Event) 类型。
-用于存储学期相关的事件，如假期、考试、活动等。
-"""
+# 校历事件 (Calendar Event) 类型。
+# 用于存储学期相关的事件，如假期、考试、活动等。
 type CalendarEvent {
   id: Int!
   semesterId: Int!
@@ -17,18 +15,14 @@ type CalendarEvent {
   updatedByAccoutId: Int
 }
 
-"""
-时间段枚举类型 (Time Slot)。
-"""
+# 时间段枚举类型 (Time Slot)。
 enum TimeSlot {
   ALL_DAY      # 全天
   MORNING      # 上午
   AFTERNOON    # 下午
 }
 
-"""
-事件类型枚举 (Event Type)。
-"""
+# 事件类型枚举 (Event Type)。
 enum EventType {
   HOLIDAY         # 假期
   EXAM            # 考试
@@ -38,18 +32,14 @@ enum EventType {
   SPORTS_MEET     # 运动会
 }
 
-"""
-记录状态 (Record Status)。
-"""
+# 记录状态 (Record Status)。
 enum RecordStatus {
   ACTIVE            # 正常生效
   ACTIVE_TENTATIVE  # 临时生效
   EXPIRY            # 失效
 }
 
-"""
-创建校历事件输入类型。
-"""
+# 创建校历事件输入类型。
 input CreateCalendarEventInput {
   semesterId: Int!
   topic: String!
@@ -61,9 +51,7 @@ input CreateCalendarEventInput {
   updatedByAccoutId: Int
 }
 
-"""
-更新校历事件输入类型。
-"""
+# 更新校历事件输入类型。
 input UpdateCalendarEventInput {
   topic: String
   date: String

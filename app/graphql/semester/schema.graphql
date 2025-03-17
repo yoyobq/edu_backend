@@ -1,7 +1,5 @@
-"""
-学期信息表 (Semester)
-存储学期的基本信息，包括学年、学期编号、起止日期等。
-"""
+# 学期信息表 (Semester)
+# 存储学期的基本信息，包括学年、学期编号、起止日期等。
 type Semester {
   id: Int!
   schoolYear: Int!
@@ -13,9 +11,7 @@ type Semester {
   isCurrent: Boolean!
 }
 
-"""
-创建学期输入类型。
-"""
+# 创建学期输入类型。
 input CreateSemesterInput {
   schoolYear: Int!
   termNumber: Int!
@@ -26,9 +22,7 @@ input CreateSemesterInput {
   isCurrent: Boolean!
 }
 
-"""
-更新学期输入类型。
-"""
+# 更新学期输入类型。
 input UpdateSemesterInput {
   schoolYear: Int
   termNumber: Int
@@ -39,9 +33,7 @@ input UpdateSemesterInput {
   isCurrent: Boolean
 }
 
-"""
-查询和变更类型。
-"""
+# 查询和变更类型。
 extend type Query {
   getSemester(id: Int!): Semester
   listSemesters(schoolYear: Int, isCurrent: Boolean): [Semester]
