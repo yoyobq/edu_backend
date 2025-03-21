@@ -6,14 +6,19 @@ const Service = require('egg').Service;
 
 class MyLoginService extends Service {
   /**
-   * 登录请求
-   * @param {object} params - 包含所有参数的对象。
-   * @param {string} params.userId - 用户 ID
-   * @param {string} params.password - 用户密码
-   * @return {Promise<object>} - 返回包含登录状态和 cookie 的对象
+   * 登录教务系统核心方法
+   * @param {Object} params 登录凭证对象
+   * @param {string} params.userId 教务系统登录账号（6位数字工号/学号）
+   * @param {string} params.password 教务系统登录密码（区分大小写）
+   * @typedef {Object} LoginResponse
+   * @property {boolean} success 是否登录成功
+   * @property {Object} cookie 加密后的cookie对象
+   * @property {string} jsessionCookie JSESSIONID_A会话标识
+   * @property {Object} userInfo 用户基本信息
+   * @property {string} refreshedToken 刷新后的Bearer Token
+   * @return {Promise<LoginResponse>} 登录响应对象
    */
-  async loginToSSTS({ userId, password }) {
-
+  async loginToSSTS({ userId = process.env.SSTS_DEF_USER, password = process.env.SSTS_DEF_PASSWORD }) {
     // 定义登录请求的 URL 和请求头
     // 生成随机的 `winTemp` 参数，格式为 "整数.小数"
     const winTemp = `${Math.floor(Math.random() * 100000)}.${(Math.random()).toFixed(13).slice(2)}`;
@@ -274,7 +279,6 @@ class MyLoginService extends Service {
       return decodedData.data.token;
     }
   }
-
 
   /**
    * !!!!! 此代码作废 refresh session 并不是一个主动操作
