@@ -265,7 +265,7 @@ class MyCurriPlanService extends Service {
   }
 
   // 第一步: 获取计划列表
-  async getCurriPlanListSSTS({ JSESSIONID_A, userId, token }) {
+  async getCurriPlanListSSTS({ JSESSIONID_A, userId = '', token, deptId = '' }) {
     // console.log(JSESSIONID_A, userId);
     // 教务系统需要单独的 token
     // eslint-disable-next-line no-unused-vars
@@ -311,15 +311,20 @@ class MyCurriPlanService extends Service {
       connectId: '1',
       whereParams: {
         number: '1',
+        /** 注意此处的 teacher_id 和 userId，
+         *  都可以从 SSTS 获得数据
+         *  显然是存放了冗余数据的不同字段
+         */
+        // teacher_id: '2304',
         userId,
         school_year: '2024',
         semester: '2',
-        orgid: '',
+        orgid: deptId, // string
         course_id: '',
       },
     };
-      // console.log(plainTextData);
-      // 加密 payload
+
+    // 加密 payload
     const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(plainTextData);
     // console.log(payload);
     // const payload2 = 'hTcOK7xIDf4AKm1YZzIgjScs91EN0Ry5DOLrTDVQleiMycZKiOcymG85digViykkHomhpIW4gbmG1VinPEOZcXZtY/A0LK2HhXavtYK2YkunidQ3uteIYNhFeQJsl6E587vot4y5H5cp/w5ouWQMCCllI2MmewFV/FSjb0vA3qEF1KENZ3Igi8qATI7keV4rKp9vpJ+2t6+htprUDHVkFdOE8EwULaA2tURvLPgb40ZzViJN+eWReT1+gYt4G6YnTn9ydyJRK6W8lpdi6shI5/OomMkKqbPcmSA8tS/T2nMzIDjXhHpAAzl0BvNi9U96';
@@ -336,6 +341,7 @@ class MyCurriPlanService extends Service {
         // withCredentials: true, // 发送凭证（Cookie）
         timeout: 30000,
       });
+      // console.log(response.data.toString());
     } catch (error) {
       // this.ctx.logger.error('token 刷新:', error.message);
       throw error;
@@ -344,7 +350,7 @@ class MyCurriPlanService extends Service {
     // response 是校园网的反馈
     // decodedData 是 reponse 中有效数据解码后的内容
     const decodedData = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
-
+    // console.log(decodedData.data);
     // 此处的错误不能像登录功能一样，简单的用 decodedCode.code  来判断是否成功反馈
     // 因为反馈信息中根本不包含这一项，这是由于校园网没有一套统一的错误报告和处理流程造成的
     // 我这里选择用 decodedData.data[] 这个保存了教学计划信息的数组是否存在
