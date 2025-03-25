@@ -14,6 +14,7 @@ describe('test/service/myCourses.test.js', () => {
   it('should fetch course schedules', async () => {
     // 变量名改为小写开头
     const courseList = await myCourseScheduleService.getCourseScheduleListSSTS();
+    console.log(courseList);
     assert(Array.isArray(courseList));
   });
 });

@@ -35,25 +35,25 @@ module.exports = app => {
       field: 'course_schedule_id',
       comment: '关联到 plan_course_schedule 表的 ID',
     },
-    lecturePlanId: {
+    LECTURE_PLAN_ID: {
       type: STRING(32),
       allowNull: false,
       field: 'LECTURE_PLAN_ID',
       comment: '教务系统的教学计划 ID，唯一标识',
     },
-    courseId: {
+    COURSE_ID: {
       type: STRING(32),
       allowNull: false,
       field: 'COURSE_ID',
       comment: '教务系统的课程 ID',
     },
-    teacherInChargeId: {
+    TEACHER_IN_CHARGE_ID: {
       type: STRING(32),
       allowNull: false,
       field: 'TEACHER_IN_CHARGE_ID',
       comment: '教务系统中的授课教师 ID',
     },
-    teachingClassId: {
+    TEACHING_CLASS_ID: {
       type: STRING(32),
       allowNull: false,
       field: 'TEACHING_CLASS_ID',

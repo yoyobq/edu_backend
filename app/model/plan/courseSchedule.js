@@ -96,7 +96,7 @@ module.exports = app => {
       comment: '是否工学一体化 Work-Integrated Learning (WIL)',
     },
     courseCategory: {
-      type: ENUM('必修课', '选修课', '社团课', '班会课', '其他课程'),
+      type: ENUM('理论课', '实践课', '一体化', '社团课', '班会课', '其他课程'),
       allowNull: false,
       defaultValue: '其他课程',
       field: 'course_category',
