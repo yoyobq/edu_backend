@@ -23,7 +23,7 @@
  */
 
 module.exports = app => {
-  const { INTEGER, STRING, ENUM, DATE, NOW } = app.Sequelize;
+  const { INTEGER, STRING, ENUM, DATE, DATEONLY, NOW } = app.Sequelize;
 
   const CalendarEvent = app.model.define('plan_calendar_events', {
     id: {
@@ -44,31 +44,31 @@ module.exports = app => {
       comment: '事件主题 (Event Topic)',
     },
     date: {
-      type: DATE,
+      type: DATEONLY,
       allowNull: false,
       comment: '事件日期 (Event Date)',
     },
     timeSlot: {
-      type: ENUM('all_day', 'morning', 'afternoon'),
+      type: ENUM('ALL_DAY', 'MORNING', 'AFTERNOON'),
       allowNull: false,
-      defaultValue: 'all_day',
+      defaultValue: 'ALL_DAY',
       field: 'time_slot',
       comment: '时间段: all_day/全天, morning/上午, afternoon/下午',
     },
     eventType: {
-      type: ENUM('holiday', 'exam', 'activity', 'holiday_makeup', 'weekday_swap', 'sports_meet'),
+      type: ENUM('HOLIDAY', 'EXAM', 'ACTIVITY', 'HOLIDAY_MAKEUP', 'WEEKDAY_SWAP', 'SPORTS_MEET'),
       allowNull: false,
       field: 'event_type',
       comment: '事件类型: 假期、考试、活动等 (Event Type)',
     },
     originalDate: {
-      type: DATE,
+      type: DATEONLY,
       allowNull: true,
       field: 'original_date',
       comment: '调课或休假的原始日期 (Original Date)',
     },
     recordStatus: {
-      type: ENUM('active', 'active_tentative', 'expiry'),
+      type: ENUM('ACTIVE', 'ACTIVE_TENTATIVE', 'EXPIRY'),
       allowNull: false,
       defaultValue: 'active',
       field: 'record_status',
