@@ -29,6 +29,12 @@ module.exports = app => {
       field: 'staff_id',
       comment: '教师ID',
     },
+    sstsTeacherId: {
+      type: STRING(32),
+      allowNull: false,
+      field: 'ssts_teacher_id',
+      comment: '冗余数据，教务系统中的授课教师 ID',
+    },
     staffName: {
       type: STRING(64),
       allowNull: false,

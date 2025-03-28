@@ -227,6 +227,7 @@ class myCourseScheduleService extends Service {
 
     return planList.map(item => ({
       staffId: staffMap[item.TEACHER_IN_CHARGE_ID] || 0, // 根据 jobId 查找 staffId
+      sstsTeacherId: item.TEACHER_IN_CHARGE_ID, // courseSchedule.sstsTeacherId (string)
       staffName: item.TEACHER_NAME, // courseSchedule.name (string) 例："张三"
       teachingClassName: item.CLASS_NAME, // courseSchedule.teachingClassName (string) 例："信科2021班"
       classroomId: null,
