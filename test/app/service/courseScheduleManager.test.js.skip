@@ -73,19 +73,28 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
     // assert(hours >= 0, '课时数不应为负数');
   });
 
-  it('2. 应计算单个教职工课时', async () => {
+  it('5. 应计算单个教职工实际上课日期和完整的课程', async () => {
     const ctx = app.mockContext();
-    const hours = await ctx.service.plan.courseScheduleManager.calculateStaffHours({
-      staffId: testStaffId,
-      startDate: '2025-02-14',
-      endDate: '2025-6-29',
+    const dates = await ctx.service.plan.courseScheduleManager.listActualTeachingDates({
+      staffId: 8,
+      semesterId: 2,
     });
 
-    console.log(hours);
-    //   assert(typeof hours === 'number', '应返回数字类型');
-    //   assert(hours >= 0, '课时数不应为负数');
+    // console.dir(dates, { depth: null });
+    // console.log(dates);
+    assert(Array.isArray(dates), '应返回数组类型');
   });
 
+  it('6. 应列出指定学期实际授课课时', async () => {
+    const ctx = app.mockContext();
+    const hours = await ctx.service.plan.courseScheduleManager.calculateStaffHours({
+      staffId: 8,
+      semesterId: 2,
+    });
+
+    assert(typeof hours === 'number' && hours > 0, '应返回数组类型');
+    // console.log(hours);
+  })
   // it('3. 应批量统计教职工课时', async () => {
   //   const ctx = app.mockContext();
   //   const result = await ctx.service.plan.courseScheduleManager.calculateMultipleStaffHours({
@@ -99,17 +108,5 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
   //   assert(result.some(r => r.staffId === testStaffId), '应包含有效教职工数据');
   // });
 
-  // it('4. 应列出实际授课日期', async () => {
-  //   const ctx = app.mockContext();
-  //   const dates = await ctx.service.plan.courseScheduleManager.listActualTeachingDates({
-  //     staffId: testStaffId,
-  //     semesterId: testSemesterId,
-  //   });
-
-  //   assert(Array.isArray(dates), '应返回数组类型');
-  //   dates.forEach(date => {
-  //     assert(date.date instanceof Date, '应包含有效日期对象');
-  //     assert(typeof date.hours === 'number', '应包含课时数');
-  //   });
-  // });
+  ;
 });

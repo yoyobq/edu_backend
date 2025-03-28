@@ -13,7 +13,7 @@
  */
 
 module.exports = app => {
-  const { INTEGER, STRING, DATE, TINYINT, BOOLEAN } = app.Sequelize;
+  const { INTEGER, STRING, DATEONLY, TINYINT, BOOLEAN } = app.Sequelize;
 
   const tbn = 'plan_semesters';
   const Semester = app.model.define(tbn, {
@@ -45,19 +45,25 @@ module.exports = app => {
       comment: '学期名称 (Semester Name) - 如: 2024春季学期',
     },
     startDate: {
-      type: DATE,
+      type: DATEONLY,
       allowNull: false,
       field: 'start_date',
       comment: '开始日期 (Start Date)',
     },
+    firstTeachingDate: {
+      type: DATEONLY,
+      allowNull: false,
+      field: 'first_teaching_date',
+      comment: '教学周开始日期（通常为报道后一周的周一）',
+    },
     examStartDate: {
-      type: DATE,
+      type: DATEONLY,
       allowNull: false,
       field: 'exam_start_date',
       comment: '考试周开始日期（通常为周一）',
     },
     endDate: {
-      type: DATE,
+      type: DATEONLY,
       allowNull: false,
       field: 'end_date',
       comment: '结束日期 (End Date)',
