@@ -15,6 +15,7 @@ class myCourseScheduleService extends Service {
 
     // 2. 获取排课数据
     const planList = await this._fetchPlanList({ JSESSIONID_A, token });
+    this._filterPlanListForCheck(planList);
 
     // 3. 获取 Semester 映射
     const semesterMap = await this._fetchSemesterMap();
@@ -240,7 +241,7 @@ class myCourseScheduleService extends Service {
       weekCount: item.WEEK_COUNT, // courseSchedule.weekCount (number) 例：16
       weeklyHours: item.WEEKLY_HOURS, // courseSchedule.weeklyHours (number) 例：4
       credits: item.CREDITS, // courseSchedule.credit (number) 例：6
-      isWil: item.COURSE_CATEGORY === '3' ? 1 : 0, // courseSchedule.is_wil (boolean) 例：1
+      coefficient: item.CLASS_NAME.includes(',') ? 1.2 : 1.0, // courseSchedule.is_wil (boolean) 例：1
       courseCategory: categoryMap[item.COURSE_CATEGORY] || '其他课程', // courseSchedule.courseCategory
       weekNumberSimpstr: item.WEEK_NUMBER_SIMPSTR,
       weekNumberString: item.WEEK_NUMBER_STRING, // courseSchedule.weekNumberString (string) 例："1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0"
@@ -335,6 +336,8 @@ class myCourseScheduleService extends Service {
       TEACHER_NAME: item.TEACHER_NAME,
       CLASS_NAME: item.CLASS_NAME,
       COURSE_NAME: item.COURSE_NAME,
+      FLAG1: item.FLAG1,
+      SCHEDULING_FLAG: item.SCHEDULING_FLAG,
       // BATCH_ID: item.BATCH_ID, // 基于学期的教学计划聚合编号，不转存
       // ROW_NUM: item.ROW_NUM, // SSTS 网站中表单的排序，不转存
       COURSE_CATEGORY: item.COURSE_CATEGORY, // 对应课程类型（理论课1，实践课2，一体化3等）
@@ -342,8 +345,7 @@ class myCourseScheduleService extends Service {
       WEEK_NUMBER_SIMPSTR: item.WEEK_NUMBER_SIMPSTR, // 课程的周次和时间
     }));
 
-    // console.log(filtered);
-    return filtered;
+    console.log(filtered);
   }
 }
 

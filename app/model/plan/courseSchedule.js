@@ -12,7 +12,7 @@
  */
 
 module.exports = app => {
-  const { INTEGER, STRING, TINYINT, ENUM } = app.Sequelize;
+  const { DECIMAL, INTEGER, STRING, TINYINT, ENUM } = app.Sequelize;
 
   const tbn = 'plan_course_schedule';
 
@@ -94,12 +94,12 @@ module.exports = app => {
       allowNull: true,
       comment: '学分',
     },
-    isWil: {
-      type: TINYINT(1),
+    coefficient: {
+      type: DECIMAL(3, 2),
       allowNull: false,
-      defaultValue: 0,
-      field: 'is_wil',
-      comment: '是否工学一体化 Work-Integrated Learning (WIL)',
+      defaultValue: 1.0,
+      field: 'coefficient',
+      comment: '课程系数，用于计算课时权重',
     },
     courseCategory: {
       type: ENUM('理论课', '实践课', '一体化', '社团课', '班会课', '其他课程'),

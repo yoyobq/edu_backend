@@ -303,7 +303,7 @@ class MyCurriPlanService extends Service {
       take: 100,
       skip: 0,
       page: 1,
-      pageSize: 100,
+      pageSize: 300,
       group: [],
       // 可笑，这个字段是无效的
       queryNo: 'Q_EA_Lecture_Plan_Edit',
