@@ -8,10 +8,12 @@
  */
 
 const { Service } = require('egg');
+const moment = require('moment');
 
 class CourseScheduleManagerService extends Service {
   /**
    * 判断某日期是否上课日，并返回实际的上课 weekday（考虑调休）
+   * 并未考虑非上课周的情况
    * @private
    * @param {Object} param - 参数对象
    * @param {Array} param.events - 校历事件数组
@@ -31,30 +33,44 @@ class CourseScheduleManagerService extends Service {
       });
     }
 
-    // 检查是否为调课日（当天为调课后的上课日）
+    // 提前创建日期对象并标准化星期几 (0=周日→7)
+    const dateObj = new Date(date);
+    const normalizeWeekday = day => (day === 0 ? 7 : day);
+
+    // 查找相关事件
     const weekdaySwap = events.find(e => e.eventType === 'WEEKDAY_SWAP' && e.date === date);
-
-    // 检查是否为假期上课（当天原本假期，但现调为休息）
     const holidayMakeup = events.find(e => e.eventType === 'HOLIDAY_MAKEUP' && e.date === date);
-
-    // 检查是否为国定假日
     const isHoliday = events.some(e => e.eventType === 'HOLIDAY' && e.date === date);
 
+    // 处理调课日/补课日
     if (weekdaySwap || holidayMakeup) {
-      // 是调课后的上课日，取调课的那一天以确定星期
-      const changedDay = weekdaySwap || holidayMakeup;
-      const resolvedWeekday = new Date(changedDay.originalDate).getDay();
-      return { isClassDay: true, dayOfWeek: resolvedWeekday === 0 ? 7 : resolvedWeekday };
+      const { originalDate } = weekdaySwap || holidayMakeup;
+      return {
+        isClassDay: true,
+        dayOfWeek: normalizeWeekday(new Date(originalDate).getDay()),
+      };
     }
 
+    // 处理假期
     if (isHoliday) {
-      // 当天是调休原始日或假日，不上课
-      return { isClassDay: false, dayOfWeek: null };
+      const swapTarget = events.find(e =>
+        (e.eventType === 'WEEKDAY_SWAP' || e.eventType === 'HOLIDAY_MAKEUP') &&
+        e.originalDate === date
+      );
+
+      return {
+        isClassDay: false,
+        dayOfWeek: swapTarget
+          ? normalizeWeekday(new Date(swapTarget.date).getDay())
+          : normalizeWeekday(dateObj.getDay()),
+      };
     }
 
-    // 默认情况，当天正常上课
-    const weekday = new Date(date).getDay();
-    return { isClassDay: true, dayOfWeek: weekday === 0 ? 7 : weekday };
+    // 默认情况
+    return {
+      isClassDay: true,
+      dayOfWeek: normalizeWeekday(dateObj.getDay()),
+    };
   }
 
   /**
@@ -150,30 +166,48 @@ class CourseScheduleManagerService extends Service {
   }
 
   /**
-   * 按日期查询某个教职工当天的课表（考虑特殊事件）
+   * 按日期查询某个教职工当天的课表（考虑特殊事件，自动识别所属学期）
    * @param {Object} param - 参数对象
    * @param {number} param.staffId - 教职工ID
    * @param {string} param.date - 查询的日期
-   * @return {Promise<Array>} - 当天有效的课时安排，同 getFullScheduleByStaff
+   * @return {Promise<Array>} - 当天有效的课时安排
    */
   async getDailySchedule({ staffId, date }) {
     const { ctx } = this;
 
     const { isClassDay, dayOfWeek } = await this._resolveClassDay({ date });
-    console.log(date, isClassDay, dayOfWeek);
-
     if (!isClassDay) return [];
 
+    /**
+     * 魔法偏移天数（用于判断是否属于教学期）：默认考试周开始前两天即视为教学期结束。
+     * 说明：
+     * - 考试周在一月或六月，有可能遇到端午或元旦这种一日的国假
+     * - 通常考试周从周一开始，此时偏移 2 天落在周六，属于休息日，不影响判断。
+     * - 若考试周周一为国假，偏移 2 天后也可落在周日，同属休息日，不影响判断。
+     */
+    const OFFSET_DAYS = 2;
+    const teachingEnd = moment(date).add(OFFSET_DAYS, 'days').format('YYYY-MM-DD');
+    // 查找当前日期所属的学期
+    const semester = await ctx.model.Plan.Semester.findOne({
+      where: {
+        firstTeachingDate: { [ctx.app.Sequelize.Op.lte]: date },
+        examStartDate: { [ctx.app.Sequelize.Op.gt]: teachingEnd },
+      },
+    });
+    if (!semester) return [];
+
+    // 仅查询该学期内的课程安排
     const schedules = await ctx.model.Plan.CourseSchedule.findAll({
-      where: { staffId },
+      where: { staffId, semesterId: semester.id },
       include: [{
         model: ctx.model.Plan.CourseSlot,
         as: 'slots',
-        where: { dayOfWeek },
       }],
     });
 
-    return this._flattenSchedules(schedules);
+    // 扁平化并筛选当天实际应上的课程（考虑调休）
+    const allSlots = this._flattenSchedules(schedules);
+    return allSlots.filter(s => s.dayOfWeek === dayOfWeek);
   }
 
   /**
@@ -181,32 +215,28 @@ class CourseScheduleManagerService extends Service {
    * @param {Object} param - 参数对象
    * @param {number} param.staffId - 教职工ID
    * @param {number} param.sstsTeacherId - 校园网教职工ID
-   * @param {number} param.semesterId - 学期ID
+   * @param {Object} param.semester - 学期对象，包含 firstTeachingDate、endDate、id 等
+   * @param {Array<Object>} param.events - 必传，校历事件列表
    * @return {Promise<Array>} - 实际有效的上课日期及课时详情
    */
-  async listActualTeachingDates({ staffId = 0, sstsTeacherId, semesterId }) {
+  async listActualTeachingDates({ staffId = 0, sstsTeacherId, semester, events }) {
     const { ctx } = this;
 
-    // 获取学期信息
-    const semester = await ctx.model.Plan.Semester.findByPk(semesterId);
-    if (!semester) ctx.throw(404, `未找到ID为${semesterId}的学期信息`);
-    if (!semester.firstTeachingDate) ctx.throw(400, '学期信息缺少 firstTeachingDate，请确认数据库数据');
+    if (!semester || !semester.firstTeachingDate || !semester.endDate || !semester.id) {
+      ctx.throw(400, '缺少完整的学期信息（semester）');
+    }
+
+    if (!Array.isArray(events)) {
+      ctx.throw(400, '必须传入事件列表（events）');
+    }
 
     // 获取该教师在该学期的所有课程安排及其时段
     const schedules = await ctx.model.Plan.CourseSchedule.findAll({
-      where: staffId !== 0 ? { staffId, semesterId } : { sstsTeacherId, semesterId },
+      where: staffId !== 0 ? { staffId, semesterId: semester.id } : { sstsTeacherId, semesterId: semester.id },
       include: [{ model: ctx.model.Plan.CourseSlot, as: 'slots' }],
     });
-      // 一次性查询学期内所有校历事件
-    const events = await ctx.model.Plan.CalendarEvent.findAll({
-      where: {
-        date: {
-          semesterId,
-        },
-        recordStatus: [ 'ACTIVE', 'ACTIVE_TENTATIVE' ],
-      },
-    });
-      // 初始化结果数组
+
+    // 初始化结果数组
     const actualTeachingDates = [];
     // 从学期第一个教学日开始遍历
     const currentDate = new Date(semester.firstTeachingDate);
@@ -271,31 +301,108 @@ class CourseScheduleManagerService extends Service {
     return actualTeachingDates;
   }
 
+
   /**
-     * 计算教职工在指定日期范围内的实际课时数
-     * @param {Object} param - 参数对象
-     * @param {number} param.staffId - 教职工ID（优先使用）
-     * @param {number} param.sstsTeacherId - 校园网教职工ID（当 staffId 为 0 时使用）
-     * @param {number} param.semesterId - 学期ID
-     * @return {Promise<number>} - 实际有效的总课时数
-     */
-  async calculateStaffHours({ staffId = 0, sstsTeacherId, semesterId }) {
-    // 根据 staffId 或 sstsTeacherId 查询课程表，获取实际教学日期
-    const allDates = await this.listActualTeachingDates({
-      staffId: staffId !== 0 ? staffId : undefined,
-      sstsTeacherId: staffId === 0 ? sstsTeacherId : undefined,
-      semesterId,
+   * 计算教职工在指定学期内因假期取消的课程
+   * @param {Object} param - 参数对象
+   * @param {number} param.staffId - 教职工ID（优先使用）
+   * @param {number} param.sstsTeacherId - 校园网教职工ID（当 staffId 为 0 时使用）
+   * @param {Object} param.semester - 学期对象，包含 firstTeachingDate、endDate、id 等
+   * @param {Array<Object>} param.events - 必传，校历事件列表
+   * @return {Promise<Object>} - 取消的课程信息及统计
+   */
+  async calculateCancelledCourses({ staffId = 0, sstsTeacherId, semester, events }) {
+    // 提取所有假期事件
+    const holidays = events.filter(e => e.eventType === 'HOLIDAY').map(e => e.date);
+
+    // 提取调课上课（从假期调为上课）的原始日并从 holidays 中剔除
+    const makeupDays = events.filter(e => e.eventType === 'HOLIDAY_MAKEUP').map(e => e.originalDate);
+    const finalHolidays = holidays.filter(d => !makeupDays.includes(d));
+
+    // 获取该教师在该学期的所有课程安排及其时段
+    const schedules = await this.ctx.model.Plan.CourseSchedule.findAll({
+      where: {
+        semesterId: semester.id,
+        ...(staffId ? { staffId } : { sstsTeacherId }),
+      },
+      include: [{
+        model: this.ctx.model.Plan.CourseSlot,
+        as: 'slots',
+      }],
     });
 
+    // 先扁平化处理，以便正确处理周数判断
+    const flatSchedules = this._flattenSchedules(schedules);
+    const cancelled = [];
+
+    for (const date of finalHolidays) {
+      // 获取当天实际的星期几（已考虑调休）
+      const { dayOfWeek } = await this._resolveClassDay({ date, events });
+
+      // 计算当前日期是学期第几周
+      const weekDiff = Math.floor(
+        (new Date(date) - new Date(semester.firstTeachingDate)) /
+        (7 * 24 * 60 * 60 * 1000)
+      );
+
+      // 筛选出当天应该上的课程（考虑周数和星期几）
+      const coursesForDay = flatSchedules.filter(schedule => {
+        // 检查是否是当天的课程（星期几匹配）
+        if (schedule.dayOfWeek !== dayOfWeek) return false;
+
+        // 检查当前周是否有课
+        const weekNumberArray = schedule.weekNumberString.split(',').map(Number);
+        return weekDiff >= 0 &&
+          weekDiff < weekNumberArray.length &&
+          weekNumberArray[weekDiff] === 1;
+      });
+      // 创建基础日期信息对象（无论是否有课都包含）
+      const dateInfo = {
+        date,
+        weekOfDay: dayOfWeek,
+        weekNumber: weekDiff + 1,
+        courses: [], // 初始化为空数组
+      };
+      // 格式化返回数据，与 listActualTeachingDates 保持一致
+      if (coursesForDay.length > 0) {
+        // 转换为前端需要的格式
+        dateInfo.courses = coursesForDay.map(course => ({
+          scheduleId: course.scheduleId,
+          courseName: course.courseName,
+          slotId: course.slotId,
+          periodStart: course.periodStart,
+          periodEnd: course.periodEnd,
+          weekType: course.weekType,
+          coefficient: course.coefficient,
+        }));
+      }
+      // 无论是否有课，都添加到结果中
+      cancelled.push(dateInfo);
+    }
+
+    return cancelled;
+  }
+
+  /**
+   * 计算教职工在指定日期范围内的实际课时数
+   * @param {Object} param - 参数对象
+   * @param {number} param.staffId - 教职工ID（优先使用）
+   * @param {number} param.sstsTeacherId - 校园网教职工ID（当 staffId 为 0 时使用）
+   * @param {Object} param.semester - 学期数据
+   * @param {Object} param.events - 学期事件数据
+   * @return {Promise<number>} - 实际有效的总课时数
+   */
+  async calculateStaffHours({ staffId = 0, sstsTeacherId, semester, events }) {
+    const allDates = await this.listActualTeachingDates({ staffId, sstsTeacherId, semester, events });
     let totalHours = 0;
-    // 遍历所有课程日期，计算总课时数
     allDates.forEach(day => {
       day.courses.forEach(course => {
         totalHours += (course.periodEnd - course.periodStart + 1) * course.coefficient;
       });
     });
-    return parseFloat(totalHours.toFixed(2)); // 保留两位小数
+    return parseFloat(totalHours.toFixed(2));
   }
+
 
   /**
      * 批量统计多个教职工在指定日期范围内的课时
@@ -308,6 +415,16 @@ class CourseScheduleManagerService extends Service {
     const { ctx } = this;
     const results = [];
 
+    const semester = await ctx.model.Plan.Semester.findByPk(semesterId);
+    if (!semester) ctx.throw(404, `未找到 ID 为 ${semesterId} 的学期`);
+
+    const events = await ctx.model.Plan.CalendarEvent.findAll({
+      where: {
+        semesterId,
+        recordStatus: [ 'ACTIVE', 'ACTIVE_TENTATIVE' ],
+      },
+    });
+
     if (staffIds.length === 0) {
       // 当 staffIds 为空时，查询所有唯一的 sstsTeacherId 及 staffName
       const teachers = await ctx.model.Plan.CourseSchedule.findAll({
@@ -319,7 +436,12 @@ class CourseScheduleManagerService extends Service {
 
       // 计算每个教师的课时数
       for (const { sstsTeacherId, staffId, staffName } of teachers) {
-        const hours = await this.calculateStaffHours({ sstsTeacherId, semesterId });
+        const hours = await this.calculateStaffHours({
+          staffId,
+          sstsTeacherId,
+          semester,
+          events,
+        });
         results.push({ staffId, sstsTeacherId, staffName, totalHours: parseFloat(hours.toFixed(2)) });
       }
     } else {
@@ -332,7 +454,7 @@ class CourseScheduleManagerService extends Service {
         });
         if (!staffData) continue;
         const { sstsTeacherId, staffName } = staffData;
-        const hours = await this.calculateStaffHours({ staffId, semesterId });
+        const hours = await this.calculateStaffHours({ staffId, semester, events });
         results.push({ staffId, sstsTeacherId, staffName, totalHours: parseFloat(hours.toFixed(2)) });
       }
     }

@@ -42,7 +42,7 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
     const ctx = app.mockContext();
     const schedules = await ctx.service.plan.courseScheduleManager.getDailySchedule({
       staffId: testStaffId,
-      date: '2025-03-27',
+      date: '2024-12-27',
     });
 
     // console.log(schedules);
@@ -74,10 +74,19 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
   });
 
   it('5. 应计算单个教职工实际上课日期和完整的课程', async () => {
+    const semesterId = 2;
     const ctx = app.mockContext();
+    const semester = await ctx.model.Plan.Semester.findByPk(2);
+    const events = await ctx.model.Plan.CalendarEvent.findAll({
+      where: {
+        semesterId,
+        recordStatus: [ 'ACTIVE', 'ACTIVE_TENTATIVE' ],
+      },
+    });
     const dates = await ctx.service.plan.courseScheduleManager.listActualTeachingDates({
       staffId: 40,
-      semesterId: 2,
+      semester,
+      events,
     });
 
     // console.dir(dates, { depth: null });
@@ -85,25 +94,54 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
     assert(Array.isArray(dates), '应返回数组类型');
   });
 
-  it('6. 应列出单个教职工、指定学期实际授课课时', async () => {
+  it('6. 应计算教职工在指定学期内因假期取消的课程', async () => {
+    const semesterId = 2;
     const ctx = app.mockContext();
+    const semester = await ctx.model.Plan.Semester.findByPk(2);
+    const events = await ctx.model.Plan.CalendarEvent.findAll({
+      where: {
+        semesterId,
+        recordStatus: [ 'ACTIVE', 'ACTIVE_TENTATIVE' ],
+      },
+    });
+    const dates = await ctx.service.plan.courseScheduleManager.calculateCancelledCourses({
+      staffId: 2,
+      semester,
+      events,
+    });
+
+    // console.dir(dates, { depth: null });
+    // console.log(dates);
+    assert(Array.isArray(dates), '应返回数组类型');
+  });
+
+  it('7. 应列出单个教职工、指定学期实际授课课时', async () => {
+    const ctx = app.mockContext();
+    const semester = await ctx.model.Plan.Semester.findByPk(2);
+    const events = await ctx.model.Plan.CalendarEvent.findAll({
+      where: {
+        semesterId: 2,
+        recordStatus: [ 'ACTIVE', 'ACTIVE_TENTATIVE' ],
+      },
+    });
     const hours = await ctx.service.plan.courseScheduleManager.calculateStaffHours({
       staffId: 8,
-      semesterId: 2,
+      semester,
+      events,
     });
 
     assert(typeof hours === 'number' && hours > 0, '应返回数组类型');
     // console.log(hours);
   });
 
-  it('7. 应批量统计全体教职工课时', async () => {
+  it('8. 应批量统计全体教职工课时', async () => {
     const ctx = app.mockContext();
     const result = await ctx.service.plan.courseScheduleManager.calculateMultipleStaffHours({
-      // staffIds: [ 8, 2 ],
+      staffIds: [ 8, 2 ],
       semesterId: 2,
     });
 
     assert(Array.isArray(result), '应返回数组类型');
-    console.log(result);
+    // console.log(result);
   });
 });
