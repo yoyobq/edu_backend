@@ -30,7 +30,7 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
   it('1. 应获取教职工完整课表', async () => {
     const ctx = app.mockContext();
     const schedules = await ctx.service.plan.courseScheduleManager.getFullScheduleByStaff({
-      staffId: testStaffId,
+      staffId: 40,
       semesterId: testSemesterId,
     });
     // console.log(staffId, semesterId);
@@ -76,7 +76,7 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
   it('5. 应计算单个教职工实际上课日期和完整的课程', async () => {
     const ctx = app.mockContext();
     const dates = await ctx.service.plan.courseScheduleManager.listActualTeachingDates({
-      staffId: 8,
+      staffId: 40,
       semesterId: 2,
     });
 
@@ -85,7 +85,7 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
     assert(Array.isArray(dates), '应返回数组类型');
   });
 
-  it('6. 应列出指定学期实际授课课时', async () => {
+  it('6. 应列出单个教职工、指定学期实际授课课时', async () => {
     const ctx = app.mockContext();
     const hours = await ctx.service.plan.courseScheduleManager.calculateStaffHours({
       staffId: 8,
@@ -94,19 +94,16 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
 
     assert(typeof hours === 'number' && hours > 0, '应返回数组类型');
     // console.log(hours);
-  })
-  // it('3. 应批量统计教职工课时', async () => {
-  //   const ctx = app.mockContext();
-  //   const result = await ctx.service.plan.courseScheduleManager.calculateMultipleStaffHours({
-  //     staffIds: [ testStaffId, 9999 ], // 包含无效ID测试容错
-  //     startDate: '2024-03-01',
-  //     endDate: '2024-03-31',
-  //   });
+  });
 
-  //   assert(Array.isArray(result), '应返回数组类型');
-  //   assert(result.length === 2, '应保持输入ID数量一致');
-  //   assert(result.some(r => r.staffId === testStaffId), '应包含有效教职工数据');
-  // });
+  it('7. 应批量统计全体教职工课时', async () => {
+    const ctx = app.mockContext();
+    const result = await ctx.service.plan.courseScheduleManager.calculateMultipleStaffHours({
+      // staffIds: [ 8, 2 ],
+      semesterId: 2,
+    });
 
-  ;
+    assert(Array.isArray(result), '应返回数组类型');
+    console.log(result);
+  });
 });

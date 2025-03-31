@@ -241,7 +241,7 @@ class myCourseScheduleService extends Service {
       weekCount: item.WEEK_COUNT, // courseSchedule.weekCount (number) 例：16
       weeklyHours: item.WEEKLY_HOURS, // courseSchedule.weeklyHours (number) 例：4
       credits: item.CREDITS, // courseSchedule.credit (number) 例：6
-      coefficient: item.CLASS_NAME.includes(',') ? 1.2 : 1.0, // courseSchedule.is_wil (boolean) 例：1
+      coefficient: item.CLASS_NAME.includes(',') ? 1.6 : 1.0, // courseSchedule.is_wil (boolean) 例：1
       courseCategory: categoryMap[item.COURSE_CATEGORY] || '其他课程', // courseSchedule.courseCategory
       weekNumberSimpstr: item.WEEK_NUMBER_SIMPSTR,
       weekNumberString: item.WEEK_NUMBER_STRING, // courseSchedule.weekNumberString (string) 例："1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0"

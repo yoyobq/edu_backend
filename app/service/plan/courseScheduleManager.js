@@ -14,7 +14,7 @@ class CourseScheduleManagerService extends Service {
    * 判断某日期是否上课日，并返回实际的上课 weekday（考虑调休）
    * @private
    * @param {Object} param - 参数对象
-   * @param param.events - 校历事件数组
+   * @param {Array} param.events - 校历事件数组
    * @param {string} param.date - 要查询的日期
    * @return {Promise<{ isClassDay: boolean, dayOfWeek: number }>} - 是否上课 + 实际星期几（1~7）
    */
@@ -177,13 +177,14 @@ class CourseScheduleManagerService extends Service {
   }
 
   /**
-   * 精确列出某教职工在指定学期内实际要上课的所有日期及课时
+   * 精确列出某教职工在指定学期内实际要上课的所有日期及课程
    * @param {Object} param - 参数对象
    * @param {number} param.staffId - 教职工ID
+   * @param {number} param.sstsTeacherId - 校园网教职工ID
    * @param {number} param.semesterId - 学期ID
    * @return {Promise<Array>} - 实际有效的上课日期及课时详情
    */
-  async listActualTeachingDates({ staffId, semesterId }) {
+  async listActualTeachingDates({ staffId = 0, sstsTeacherId, semesterId }) {
     const { ctx } = this;
 
     // 获取学期信息
@@ -193,7 +194,7 @@ class CourseScheduleManagerService extends Service {
 
     // 获取该教师在该学期的所有课程安排及其时段
     const schedules = await ctx.model.Plan.CourseSchedule.findAll({
-      where: { staffId, semesterId },
+      where: staffId !== 0 ? { staffId, semesterId } : { sstsTeacherId, semesterId },
       include: [{ model: ctx.model.Plan.CourseSlot, as: 'slots' }],
     });
       // 一次性查询学期内所有校历事件
@@ -247,6 +248,7 @@ class CourseScheduleManagerService extends Service {
                 periodStart: slot.periodStart, // 开始节次
                 periodEnd: slot.periodEnd, // 结束节次
                 weekType: slot.weekType, // 周类型：全周/单周/双周
+                coefficient: schedule.coefficient, // 新增系数字段
               });
             });
         }
@@ -270,37 +272,72 @@ class CourseScheduleManagerService extends Service {
   }
 
   /**
-   * 计算教职工在指定日期范围内的实际课时数
-   * @param {Object} param - 参数对象
-   * @param {number} param.staffId - 教职工ID
-   * @param {number} param.semesterId - 学期ID
-   * @return {Promise<number>} - 实际有效的总课时数
-   */
-  async calculateStaffHours({ staffId, semesterId }) {
-    const allDates = await this.listActualTeachingDates({ staffId, semesterId });
+     * 计算教职工在指定日期范围内的实际课时数
+     * @param {Object} param - 参数对象
+     * @param {number} param.staffId - 教职工ID（优先使用）
+     * @param {number} param.sstsTeacherId - 校园网教职工ID（当 staffId 为 0 时使用）
+     * @param {number} param.semesterId - 学期ID
+     * @return {Promise<number>} - 实际有效的总课时数
+     */
+  async calculateStaffHours({ staffId = 0, sstsTeacherId, semesterId }) {
+    // 根据 staffId 或 sstsTeacherId 查询课程表，获取实际教学日期
+    const allDates = await this.listActualTeachingDates({
+      staffId: staffId !== 0 ? staffId : undefined,
+      sstsTeacherId: staffId === 0 ? sstsTeacherId : undefined,
+      semesterId,
+    });
+
     let totalHours = 0;
+    // 遍历所有课程日期，计算总课时数
     allDates.forEach(day => {
       day.courses.forEach(course => {
-        totalHours += (course.periodEnd - course.periodStart + 1);
+        totalHours += (course.periodEnd - course.periodStart + 1) * course.coefficient;
       });
     });
-    return totalHours;
+    return parseFloat(totalHours.toFixed(2)); // 保留两位小数
   }
-
 
   /**
-   * 批量统计多个教职工在指定日期范围内的课时
-   * @param {Object} param - 参数对象
-   * @param {Array<number>} param.staffIds - 教职工ID列表
-   * @param {string|Date} param.startDate - 开始日期
-   * @param {string|Date} param.endDate - 结束日期
-   * @return {Promise<Array>} - 每个教职工的课时统计
-   */
-  async calculateMultipleStaffHours({ staffIds, startDate, endDate }) {
-    // TODO: 批量调用 calculateStaffHours 方法，返回汇总结果
+     * 批量统计多个教职工在指定日期范围内的课时
+     * @param {Object} param - 参数对象
+     * @param {Array<number>} param.staffIds - 教职工ID列表，若为空则使用 sstsTeacherId 查询
+     * @param {number} param.semesterId - 学期ID
+     * @return {Promise<Array>} - 每个教职工的课时统计（包含 staffId, sstsTeacherId, staffName）
+     */
+  async calculateMultipleStaffHours({ staffIds = [], semesterId }) {
+    const { ctx } = this;
+    const results = [];
+
+    if (staffIds.length === 0) {
+      // 当 staffIds 为空时，查询所有唯一的 sstsTeacherId 及 staffName
+      const teachers = await ctx.model.Plan.CourseSchedule.findAll({
+        where: { semesterId },
+        attributes: [ 'sstsTeacherId', 'staffId', 'staffName' ],
+        group: [ 'sstsTeacherId', 'staffId', 'staffName' ],
+        raw: true,
+      });
+
+      // 计算每个教师的课时数
+      for (const { sstsTeacherId, staffId, staffName } of teachers) {
+        const hours = await this.calculateStaffHours({ sstsTeacherId, semesterId });
+        results.push({ staffId, sstsTeacherId, staffName, totalHours: parseFloat(hours.toFixed(2)) });
+      }
+    } else {
+      // 使用 staffId 计算课时数
+      for (const staffId of staffIds) {
+        const staffData = await ctx.model.Plan.CourseSchedule.findOne({
+          where: { staffId },
+          attributes: [ 'sstsTeacherId', 'staffName' ],
+          raw: true,
+        });
+        if (!staffData) continue;
+        const { sstsTeacherId, staffName } = staffData;
+        const hours = await this.calculateStaffHours({ staffId, semesterId });
+        results.push({ staffId, sstsTeacherId, staffName, totalHours: parseFloat(hours.toFixed(2)) });
+      }
+    }
+    return results;
   }
-
-
 }
 
 module.exports = CourseScheduleManagerService;
