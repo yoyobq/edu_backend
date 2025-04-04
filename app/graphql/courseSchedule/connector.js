@@ -10,6 +10,8 @@ class CourseScheduleConnector {
   constructor(ctx) {
     this.ctx = ctx;
     this.service = ctx.service.plan.courseSchedule; // 课程表的 service
+    // 预处理数据后访问 courseScheduleManager
+    this.preparerService = ctx.service.plan.courseScheduleManager;
   }
 
   /**
@@ -33,6 +35,50 @@ class CourseScheduleConnector {
    */
   async listCourseSchedules({ semesterId, staffId, includeSlots = false, includeSourceMap = false }) {
     return await this.service.listCourseSchedules({ semesterId, staffId, includeSlots, includeSourceMap });
+  }
+
+  /**
+   * 查询实际教学日期及日期中对应的课程
+   * @param {object} param - 输入对象
+   * @param {object} param.input - 包含查询条件的对象（如 semesterId、sstsTeacherId, staffId、weeks 等）
+   * @return {Promise<Array>} - 返回实际有效的上课日期及课时详情
+   */
+  async actualTeachingDates({ input }) {
+    const result = await this.preparerService.actualTeachingDates(input);
+    return result;
+  }
+
+  /**
+   * 查询因假期取消的课程
+   * @param {object} param - 输入对象
+   * @param {object} param.input - 包含查询条件的对象（如 semesterId、sstsTeacherId, staffId、weeks 等）
+   * @return {Promise<Array>} - 返回取消的课程列表
+   */
+  async cancelledCourses({ input }) {
+    const result = await this.preparerService.cancelledCourses(input);
+    return result;
+  }
+
+  /**
+   * 查询指定范围内实际有效的总课时数
+   * @param {object} param - 输入对象
+   * @param {object} param.input - 包含查询条件的对象（如 semesterId、sstsTeacherId, staffId、weeks 等）
+   * @return {Promise<number>} - 返回有效课时总数
+   */
+  async teachingHours({ input }) {
+    const result = await this.preparerService.teachingHours(input);
+    return result;
+  }
+
+  /**
+   * 批量统计多个教职工指定范围内实际有效的总课时数
+   * @param {object} param - 输入对象
+   * @param {object} param.input - 包含查询条件的对象（如 semesterId、sstsTeacherIds, staffIds、weeks 等）
+   * @return {Promise<Array>} - 返回每个教职工的课时统计
+   */
+  async batchTeachingHours({ input }) {
+    const result = await this.ctx.service.plan.courseScheduleManager.calculateMultipleTeachingHours(input);
+    return result;
   }
 
   /**

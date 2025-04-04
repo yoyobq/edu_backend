@@ -84,14 +84,15 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
       },
     });
     const dates = await ctx.service.plan.courseScheduleManager.listActualTeachingDates({
-      staffId: 2,
+      // staffId: null,
+      sstsTeacherId: '2226',
       semester,
       events,
       weeks: [ 12, 16 ],
     });
 
     // console.dir(dates, { depth: null });
-    // console.log(dates);
+    console.log(dates);
     assert(Array.isArray(dates), '应返回数组类型');
   });
 
@@ -140,7 +141,7 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
     assert(Array.isArray(dates), '应返回数组类型');
   });
 
-  it('7. 应列出单个教职工、指定学期(或学期中的月份)实际授课课时', async () => {
+  it('7. 应列出单个教职工、指定学期(或学期中的某几周)实际授课课时', async () => {
     const ctx = app.mockContext();
     const semester = await ctx.model.Plan.Semester.findByPk(2);
     const events = await ctx.model.Plan.CalendarEvent.findAll({

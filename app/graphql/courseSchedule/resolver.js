@@ -34,6 +34,52 @@ module.exports = {
     async listCourseSchedules(_, { semesterId, staffId, includeSlots = false, includeSourceMap = false }, ctx) {
       return await ctx.connector.courseSchedule.listCourseSchedules(semesterId, staffId, includeSlots, includeSourceMap);
     },
+
+    /**
+     * 获取教职工完整课表
+     * @param {Object} _ - 占位符，GraphQL 约定，未使用
+     * @param {Object} param - 参数对象
+     * @param {number} param.staffId - 教职工ID
+     * @param {number} param.semesterId - 学期ID
+     * @param {Object} ctx - Egg.js 上下文对象
+     * @return {Promise<Array>} - 返回扁平化的排课数组
+     */
+    async getFullScheduleByStaff(_, { staffId, semesterId }, ctx) {
+      return await ctx.service.plan.courseScheduleManager.getFullScheduleByStaff({ staffId, semesterId });
+    },
+
+    /**
+     * 按日期查询教职工当天课表
+     * @param {Object} _ - 占位符，GraphQL 约定，未使用
+     * @param {Object} param - 参数对象
+     * @param {number} param.staffId - 教职工ID
+     * @param {string} param.date - 查询日期
+     * @param {Object} ctx - Egg.js 上下文对象
+     * @return {Promise<Array>} - 返回当天有效的课时安排
+     */
+    async getDailySchedule(_, { staffId, date }, ctx) {
+      return await ctx.service.plan.courseScheduleManager.getDailySchedule({ staffId, date });
+    },
+
+    // 查询实际教学日期及日期中对应的课程
+    async actualTeachingDates(_, { input }, ctx) {
+      return await ctx.service.plan.courseScheduleManager.listActualTeachingDates(input);
+    },
+
+    // 查询因假期等事件取消的课程
+    async cancelledCourses(_, { input }, ctx) {
+      return await ctx.service.plan.courseScheduleManager.calculateCancelledCourses(input);
+    },
+
+    // 查询指定范围内实际有效的总课时数
+    async teachingHours(_, { input }, ctx) {
+      return await ctx.service.plan.courseScheduleManager.calculateTeachingHours(input);
+    },
+
+    // 批量统计多个教职工指定范围内实际有效的总课时数
+    async batchTeachingHours(_, { input }, ctx) {
+      return await ctx.service.plan.courseScheduleManager.calculateMultipleTeachingHours(input);
+    },
   },
 
   Mutation: {

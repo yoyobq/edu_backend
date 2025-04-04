@@ -46,6 +46,42 @@ type CourseSourceMap {
   semesterId: Int!
 }
 
+# 实际有效的上课日期详情
+type TeachingDate {
+  date: String!           # 日期，如 "2025-06-10"
+  weekOfDay: Int!         # 星期几 (1-7)
+  weekNumber: Int!        # 第几教学周
+  courses: [TeachingCourse]!  # 当天课程列表
+}
+
+# 课程的详细信息
+type TeachingCourse {
+  scheduleId: Int!
+  courseName: String!
+  slotId: Int!
+  periodStart: Int!
+  periodEnd: Int!
+  weekType: String!
+  coefficient: Float!
+}
+
+# 取消课程的日期详情（含假期调课说明）
+type CancelledTeachingDate {
+  date: String!
+  weekOfDay: Int!
+  weekNumber: Int!
+  courses: [TeachingCourse]!
+  note: String             # 若调课则提供说明
+}
+
+# 批量统计教师课时结果类型
+type TeachingHourSummary {
+  staffId: Int!
+  sstsTeacherId: String!
+  staffName: String!
+  totalHours: Float!
+}
+
 # 创建课程表输入类型。
 input CreateCourseScheduleInput {
   staffId: Int!
@@ -82,11 +118,46 @@ input UpdateCourseScheduleInput {
   weekNumberString: String
 }
 
+# 用于精确课时计算的参数
+input TeachingDateInput {
+  semesterId: Int!
+  staffId: Int
+  sstsTeacherId: String
+  weeks: [Int]             # [12,16] 表示 12 周至 16 周
+}
+
+# 用于批量计算的参数
+input BatchTeachingHourFilter {
+  semesterId: Int!
+  staffIds: [Int]
+  sstsTeacherIds: [String]
+  weeks: [Int]
+}
+
 # 查询和变更类型。
 extend type Query {
-  getCourseSchedule(id: Int!): CourseSchedule
-  # 在 GraphQL 里，参数默认是可选的，除非显式地标记它是 !,所以这三个变量可以按需提供
-  listCourseSchedules(semesterId: Int, staffId: Int, includeSlots: Boolean = false): [CourseSchedule]
+  # 此处是 service.plan.courseSchedule 的相关操作，暂不对外开放
+  # getCourseSchedule(id: Int!): CourseSchedule
+  # listCourseSchedules(semesterId: Int, staffId: Int, includeSlots: Boolean = false): [CourseSchedule]
+
+  # 以下是 service.plan.courseScheduleManager 的相关操作
+  # 查询某个教师某学期的完整课表
+  getFullScheduleByStaff(staffId: Int!, semesterId: Int!): [CourseSchedule]!
+
+  # 查询某教师某天的课表
+  getDailySchedule(staffId: Int!, date: String!): [CourseSchedule]!
+  
+  # 获取单个教师的实际教学日程（含周次过滤）
+  actualTeachingDates(input: TeachingDateInput!): [TeachingDate]!
+
+  # 获取单个教师因假期取消的课程（含周次过滤）
+  cancelledCourses(input: TeachingDateInput!): [CancelledTeachingDate]!
+
+  # 获取单个教师实际课时数（含周次过滤）
+  teachingHours(input: TeachingDateInput!): Float!
+
+  # 批量获取多个教师的实际课时数
+  batchTeachingHours(input: BatchTeachingHourFilter!): [TeachingHourSummary]!
 }
 
 extend type Mutation {
