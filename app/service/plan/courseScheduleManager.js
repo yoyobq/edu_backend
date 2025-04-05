@@ -231,7 +231,6 @@ class CourseScheduleManagerService extends Service {
         as: 'slots',
       }],
     });
-
     // 扁平化并筛选当天实际应上的课程（考虑调休）
     const allSlots = this._flattenSchedules(schedules);
     return allSlots.filter(s => s.dayOfWeek === dayOfWeek);

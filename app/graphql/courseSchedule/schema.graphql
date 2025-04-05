@@ -24,6 +24,29 @@ type CourseSchedule {
   sourceMap: CourseSourceMap  # 爬取数据映射（仅附属）
 }
 
+# 扁平化后的课表返回类型
+type FlatScheduleItem {
+  scheduleId: Int!
+  courseName: String!
+  staffId: Int!
+  staffName: String!
+  teachingClassName: String!
+  classroomName: String
+  semesterId: Int!
+  courseCategory: String!
+  credits: Int
+  weekCount: Int
+  weeklyHours: Int
+  coefficient: String!
+  weekNumberString: String
+  slotId: Int!
+  dayOfWeek: Int!
+  periodStart: Int!
+  periodEnd: Int!
+  weekType: String!
+}
+
+
 # 课程类别枚举类型。
 enum CourseCategory {
   REQUIRED   # 必修课
@@ -134,6 +157,12 @@ input BatchTeachingHourFilter {
   weeks: [Int]
 }
 
+# DailyScheduleInput 类型
+input DailyScheduleInput {
+  staffId: Int!
+  date: String!
+}
+
 # 查询和变更类型。
 extend type Query {
   # 此处是 service.plan.courseSchedule 的相关操作，暂不对外开放
@@ -145,7 +174,7 @@ extend type Query {
   getFullScheduleByStaff(staffId: Int!, semesterId: Int!): [CourseSchedule]!
 
   # 查询某教师某天的课表
-  getDailySchedule(staffId: Int!, date: String!): [CourseSchedule]!
+  getDailySchedule(input:DailyScheduleInput!): [FlatScheduleItem]!
   
   # 获取单个教师的实际教学日程（含周次过滤）
   actualTeachingDates(input: TeachingDateInput!): [TeachingDate]!

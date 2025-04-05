@@ -11,7 +11,8 @@ class CourseScheduleConnector {
     this.ctx = ctx;
     this.service = ctx.service.plan.courseSchedule; // 课程表的 service
     // 预处理数据后访问 courseScheduleManager
-    this.preparerService = ctx.service.plan.courseScheduleManager;
+    this.preparerService = ctx.service.plan.courseSchedulePreparer;
+    this.managerService = ctx.service.plan.courseScheduleManager;
   }
 
   /**
@@ -22,6 +23,17 @@ class CourseScheduleConnector {
    */
   async getCourseSchedule({ id }) {
     return await this.service.getCourseSchedule({ id });
+  }
+
+  /**
+   * 按日期查询某个教职工当天的课表（考虑特殊事件，自动识别所属学期）
+   * @param {Object} param - 参数对象
+   * @param {object} param.input - 包含查询条件的对象（如  staffId、date 等）
+   * @return {Promise<Array>} - 当天有效的课时安排
+   */
+  async getDailySchedule({ input }) {
+    console.log(input);
+    return await this.managerService.getDailySchedule(input);
   }
 
   /**
@@ -77,7 +89,7 @@ class CourseScheduleConnector {
    * @return {Promise<Array>} - 返回每个教职工的课时统计
    */
   async batchTeachingHours({ input }) {
-    const result = await this.ctx.service.plan.courseScheduleManager.calculateMultipleTeachingHours(input);
+    const result = await this.managerService.calculateMultipleTeachingHours(input);
     return result;
   }
 
