@@ -187,9 +187,9 @@ class CourseScheduleManagerService extends Service {
       }],
     });
 
-    const result = this._flattenSchedules(schedules);
+    // const result = this._flattenSchedules(schedules);
 
-    return result;
+    return schedules;
   }
 
   /**

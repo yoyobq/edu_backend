@@ -219,11 +219,11 @@ class myCourseScheduleService extends Service {
   cleanCourseSchedule(planList, semesterMap, staffMap) {
     // 根据外部的 COURSE_CATEGORY 映射到模型所需的枚举值
     const categoryMap = {
-      1: '理论课',
-      2: '实践课',
-      3: '一体化',
-      4: '社团课',
-      5: '班会课',
+      1: 'THEORY',
+      2: 'PRACTICE',
+      3: 'INTEGRATED',
+      4: 'CLUB',
+      5: 'CLASS_MEETING',
     };
 
     return planList.map(item => ({
@@ -242,7 +242,7 @@ class myCourseScheduleService extends Service {
       weeklyHours: item.WEEKLY_HOURS, // courseSchedule.weeklyHours (number) 例：4
       credits: item.CREDITS, // courseSchedule.credit (number) 例：6
       coefficient: item.CLASS_NAME.includes(',') ? 1.6 : 1.0, // courseSchedule.is_wil (boolean) 例：1
-      courseCategory: categoryMap[item.COURSE_CATEGORY] || '其他课程', // courseSchedule.courseCategory
+      courseCategory: categoryMap[item.COURSE_CATEGORY] || 'OTHER', // courseSchedule.courseCategory
       weekNumberSimpstr: item.WEEK_NUMBER_SIMPSTR,
       weekNumberString: item.WEEK_NUMBER_STRING, // courseSchedule.weekNumberString (string) 例："1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0"
     }));

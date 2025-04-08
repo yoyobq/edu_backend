@@ -49,11 +49,12 @@ type FlatScheduleItem {
 
 # 课程类别枚举类型。
 enum CourseCategory {
-  REQUIRED   # 必修课
-  ELECTIVE   # 选修课
-  CLUB       # 社团课
-  CLASS_MEETING # 班会课
-  OTHER      # 其他课程
+  THEORY          # 理论课
+  PRACTICE        # 实践课
+  INTEGRATED      # 一体化
+  CLUB            # 社团课
+  CLASS_MEETING   # 班会课
+  OTHER           # 其他课程
 }
 
 # 课程数据爬取映射，仅作为 CourseSchedule 的附属数据。
@@ -163,6 +164,12 @@ input DailyScheduleInput {
   date: String!
 }
 
+# FullScheduleInput 类型
+input FullScheduleInput {
+  staffId: Int!
+  semesterId: Int!
+}
+
 # 查询和变更类型。
 extend type Query {
   # 此处是 service.plan.courseSchedule 的相关操作，暂不对外开放
@@ -171,7 +178,7 @@ extend type Query {
 
   # 以下是 service.plan.courseScheduleManager 的相关操作
   # 查询某个教师某学期的完整课表
-  getFullScheduleByStaff(staffId: Int!, semesterId: Int!): [CourseSchedule]!
+  getFullScheduleByStaff(input:FullScheduleInput!): [CourseSchedule]!
 
   # 查询某教师某天的课表
   getDailySchedule(input:DailyScheduleInput!): [FlatScheduleItem]!

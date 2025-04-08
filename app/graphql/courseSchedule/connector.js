@@ -26,13 +26,22 @@ class CourseScheduleConnector {
   }
 
   /**
+   * 按工号和学期号查询某个教职工对应学期课表（不考虑特殊事件，自动识别所属学期）
+   * @param {Object} param - 参数对象
+   * @param {object} param.input - 包含查询条件的对象（如  staffId、semesterId 等）
+   * @return {Promise<Array>} - 当天有效的课时安排
+   */
+  async getFullScheduleByStaff({ input }) {
+    return await this.managerService.getFullScheduleByStaff(input);
+  }
+
+  /**
    * 按日期查询某个教职工当天的课表（考虑特殊事件，自动识别所属学期）
    * @param {Object} param - 参数对象
    * @param {object} param.input - 包含查询条件的对象（如  staffId、date 等）
    * @return {Promise<Array>} - 当天有效的课时安排
    */
   async getDailySchedule({ input }) {
-    console.log(input);
     return await this.managerService.getDailySchedule(input);
   }
 

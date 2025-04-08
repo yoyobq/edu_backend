@@ -35,17 +35,9 @@ module.exports = {
     //   return await ctx.connector.courseSchedule.listCourseSchedules(semesterId, staffId, includeSlots, includeSourceMap);
     // },
 
-    /**
-     * 获取教职工完整课表
-     * @param {Object} _ - 占位符，GraphQL 约定，未使用
-     * @param {Object} param - 参数对象
-     * @param {number} param.staffId - 教职工ID
-     * @param {number} param.semesterId - 学期ID
-     * @param {Object} ctx - Egg.js 上下文对象
-     * @return {Promise<Array>} - 返回扁平化的排课数组
-     */
-    async getFullScheduleByStaff(_, { staffId, semesterId }, ctx) {
-      return await ctx.connector.courseSchedule.getFullScheduleByStaff({ staffId, semesterId });
+    // 获取教职工完整课表
+    async getFullScheduleByStaff(_, { input }, ctx) {
+      return await ctx.connector.courseSchedule.getFullScheduleByStaff({ input });
     },
 
     // 按日期查询教职工当天课表
@@ -112,28 +104,48 @@ module.exports = {
       return await ctx.connector.courseSchedule.deleteCourseSchedule(id);
     },
   },
+  /**
+   * CourseSchedule 类型下 slots 与 sourceMap 字段的解析函数，
+   * 是我用 AI 快速生成 resolver 时根据数据表的 DDL 自动添加的代码。
+   *
+   * 但这些 resolver 被我注释掉了，原因如下：
+   *
+   * - 本项目中，slots 和 sourceMap 字段的数据是通过 Sequelize 的关联查询（include）一次性预加载完成，
+   *    无需再通过 GraphQL 字段 resolver 进行二次查询。
+   * - GraphQL 在解析某字段时，如果父级对象（即 parent）中已包含对应字段值，且无 resolver 覆盖，
+   *    则会自动返回该字段，无需显式声明 resolver。
+   *
+   * 之所以是注释保留代码，而不是完全删除，这是因为：
+   *
+   * - GraphQL 支持为任意字段定义 resolver，这使得我们可以精确控制每一个字段的数据来源，
+   *    这种机制赋予了 GraphQL 极大的灵活性，尤其在处理**复杂关联查询**时，体现出以下优势
+   * - 按需懒加载
+   * - 支持分层解耦
+   * - 更清晰的声明数据结构
+   *
+   *  如需未来支持懒加载或独立调用，可再为相关字段取消下来注释。
+  */
+  // CourseSchedule: {
+  //   /**
+  //    * 解析 slots 关联字段
+  //    * @param {Object} parent - 父级 CourseSchedule 对象
+  //    * @param {Object} _ - 占位符，GraphQL 约定，未使用
+  //    * @param {Object} ctx - Egg.js 上下文对象
+  //    * @return {Promise<Array>} - 返回 slots 课程时间安排
+  //    */
+  //   async slots(parent, _, ctx) {
+  //     return await ctx.connector.courseSlot.getSlotsByCourseScheduleId(parent.id);
+  //   },
 
-  CourseSchedule: {
-    /**
-     * 解析 slots 关联字段
-     * @param {Object} parent - 父级 CourseSchedule 对象
-     * @param {Object} _ - 占位符，GraphQL 约定，未使用
-     * @param {Object} ctx - Egg.js 上下文对象
-     * @return {Promise<Array>} - 返回 slots 课程时间安排
-     */
-    async slots(parent, _, ctx) {
-      return await ctx.connector.courseSlot.getSlotsByCourseScheduleId(parent.id);
-    },
-
-    /**
-     * 解析 sourceMap 关联字段
-     * @param {Object} parent - 父级 CourseSchedule 对象
-     * @param {Object} _ - 占位符，GraphQL 约定，未使用
-     * @param {Object} ctx - Egg.js 上下文对象
-     * @return {Promise<Object>} - 返回 sourceMap 课程爬取数据映射
-     */
-    async sourceMap(parent, _, ctx) {
-      return await ctx.connector.courseSchedule.getSourceMapByScheduleId(parent.id);
-    },
-  },
+  //   /**
+  //    * 解析 sourceMap 关联字段
+  //    * @param {Object} parent - 父级 CourseSchedule 对象
+  //    * @param {Object} _ - 占位符，GraphQL 约定，未使用
+  //    * @param {Object} ctx - Egg.js 上下文对象
+  //    * @return {Promise<Object>} - 返回 sourceMap 课程爬取数据映射
+  //    */
+  //   async sourceMap(parent, _, ctx) {
+  //     return await ctx.connector.courseSchedule.getSourceMapByScheduleId(parent.id);
+  //   },
+  // },
 };
