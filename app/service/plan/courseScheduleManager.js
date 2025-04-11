@@ -180,7 +180,6 @@ class CourseScheduleManagerService extends Service {
   async getFullScheduleByStaff({ staffId, semesterId }) {
     // 查询与 staffId、semesterId 匹配的所有 CourseSchedule，并关联 slots
     const schedules = await this.ctx.model.Plan.CourseSchedule.findAll({
-      log: true,
       where: { staffId, semesterId },
       include: [{
         model: this.ctx.model.Plan.CourseSlot,

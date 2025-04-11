@@ -1,0 +1,50 @@
+# 表示教职工的工作量信息
+type StaffWorkload {
+  # 教职工的唯一标识符
+  staffId: ID!
+  # 教职工姓名
+  staffName: String!
+  # 教职工的教学工作量项目列表
+  items: [TeachingWorkloadItem!]!
+  # 总工作时数
+  totalHours: Float!
+}
+
+# 表示单个教学工作量项目的详细信息
+type TeachingWorkloadItem {
+  # 课程名称
+  courseName: String!
+  # 教学班级名称
+  teachingClassName: String!
+  # 每周教学时数
+  weeklyHours: Float!
+  # 教学周数
+  weekCount: Int!
+  # 工作量系数
+  coefficient: Float!
+  # 工作量时数，计算公式：每周教学时数 × 教学周数 × 工作量系数
+  workloadHours: Float! # ＝ weeklyHours × weekCount × coefficient
+}
+
+# 多个教师工作量的筛选输入
+input StaffWorkloadInput {
+  semesterId: ID!
+  staffIds: [Int!]
+  sstsTeacherIds: [String!]
+}
+
+# 单个教师工作量查询输入（staffId、sstsTeacherId二选一）
+input StaffWorkloadSingleInput {
+  semesterId: ID!
+  staffId: Int
+  sstsTeacherId: String
+}
+
+
+extend type Query {
+  # 获取多个教师工作量
+  staffWorkloads(input: StaffWorkloadInput!): [StaffWorkload!]!
+
+  # 获取单个教师工作量
+  staffWorkload(input: StaffWorkloadSingleInput!): StaffWorkload
+}
