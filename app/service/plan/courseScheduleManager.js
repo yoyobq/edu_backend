@@ -36,24 +36,24 @@ class CourseScheduleManagerService extends Service {
     const dateObj = new Date(date);
     const normalizeWeekday = day => (day === 0 ? 7 : day);
 
-    // 查找相关事件
-    const weekdaySwap = events.find(e => e.eventType === 'WEEKDAY_SWAP' && e.date === date);
-    const holidayMakeup = events.find(e => e.eventType === 'HOLIDAY_MAKEUP' && e.date === date);
-    const isHoliday = events.some(e => e.eventType === 'HOLIDAY' && e.date === date);
+    // 查找相关事件，使用 teachingCalcEffect 字段而不是 eventType 来判断
+    const swapEvent = events.find(e => e.teachingCalcEffect === 'SWAP' && e.date === date);
+    const makeupEvent = events.find(e => e.teachingCalcEffect === 'MAKEUP' && e.date === date);
+    const cancelEvent = events.some(e => e.teachingCalcEffect === 'CANCEL' && e.date === date);
 
     // 处理调课日/补课日
-    if (weekdaySwap || holidayMakeup) {
-      const { originalDate } = weekdaySwap || holidayMakeup;
+    if (swapEvent || makeupEvent) {
+      const { originalDate } = swapEvent || makeupEvent;
       return {
         isClassDay: true,
         dayOfWeek: normalizeWeekday(new Date(originalDate).getDay()),
       };
     }
 
-    // 处理假期
-    if (isHoliday) {
+    // 处理停课日
+    if (cancelEvent) {
       const swapTarget = events.find(e =>
-        (e.eventType === 'WEEKDAY_SWAP' || e.eventType === 'HOLIDAY_MAKEUP') &&
+        (e.teachingCalcEffect === 'SWAP' || e.teachingCalcEffect === 'MAKEUP') &&
         e.originalDate === date
       );
 
@@ -340,16 +340,16 @@ class CourseScheduleManagerService extends Service {
    * @return {Promise<Object>} - 取消的课程信息及统计
    */
   async calculateCancelledCourses({ staffId = 0, sstsTeacherId, semester, weeks, events }) {
-    // 提取所有假期事件
-    const holidays = events.filter(e => e.eventType === 'HOLIDAY').map(e => e.date);
+    // 提取所有停课事件
+    const cancelDates = events.filter(e => e.teachingCalcEffect === 'CANCEL').map(e => e.date);
 
-    // 提取调课上课（从假期调为上课）的原始日并从 holidays 中剔除
-    const makeupDays = events.filter(e => e.eventType === 'HOLIDAY_MAKEUP').map(e => e.originalDate);
+    // 提取调课上课的原始日并从 cancelDates 中剔除
+    const makeupDays = events.filter(e => e.teachingCalcEffect === 'MAKEUP').map(e => e.originalDate);
 
     // 如果指定了周数，输出中保留 makeupDays 中对应的日期和相关信息，避免因数据不全引起的误会
-    const finalHolidays = Array.isArray(weeks) && weeks.length > 0 ?
-      holidays :
-      holidays.filter(date => !makeupDays.includes(date));
+    const finalCancelDates = Array.isArray(weeks) && weeks.length > 0 ?
+      cancelDates :
+      cancelDates.filter(date => !makeupDays.includes(date));
 
     // 获取该教师在该学期的所有课程安排及其时段
     const schedules = await this.ctx.model.Plan.CourseSchedule.findAll({
@@ -367,7 +367,7 @@ class CourseScheduleManagerService extends Service {
     const flatSchedules = this._flattenSchedules(schedules);
     let cancelledCourses = [];
 
-    for (const date of finalHolidays) {
+    for (const date of finalCancelDates) {
       // 获取当天实际的星期几（已考虑调休）
       const { dayOfWeek } = await this._resolveClassDay({ date, events });
       // 计算当前日期是学期第几周
@@ -398,7 +398,7 @@ class CourseScheduleManagerService extends Service {
         });
       } else {
         const makeupEvent = events.find(e =>
-          e.eventType === 'HOLIDAY_MAKEUP' && e.originalDate === date
+          e.teachingCalcEffect === 'MAKEUP' && e.originalDate === date
         );
         dateInfo.note = `该日课程已调至 ${makeupEvent.date}，相关课时和费用都计入实际上课日期 `;
       }

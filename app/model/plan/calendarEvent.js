@@ -61,6 +61,13 @@ module.exports = app => {
       field: 'event_type',
       comment: '事件类型: 假期、考试、活动等 (Event Type)',
     },
+    teachingCalcEffect: {
+      type: ENUM('NO_CHANGE', 'CANCEL', 'MAKEUP', 'SWAP'),
+      allowNull: false,
+      defaultValue: 'NO_CHANGE',
+      field: 'teaching_calc_effect',
+      comment: '对课程的课时计算影响：NO_CHANGE/无影响, CANCEL/停课, MAKEUP/补课, SWAP/调休',
+    },
     originalDate: {
       type: DATEONLY,
       allowNull: true,
