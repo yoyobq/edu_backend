@@ -47,12 +47,12 @@ module.exports = {
 
     // 查询实际教学日期及日期中对应的课程
     async actualTeachingDates(_, { input }, ctx) {
-      return await ctx.connector.courseSchedule.listActualTeachingDates(input);
+      return await ctx.connector.courseSchedule.actualTeachingDates({ input });
     },
 
     // 查询因假期等事件取消的课程
     async cancelledCourses(_, { input }, ctx) {
-      return await ctx.connector.courseSchedule.calculateCancelledCourses(input);
+      return await ctx.connector.courseSchedule.cancelledCourses({ input });
     },
 
     // 查询指定范围内实际有效的总课时数

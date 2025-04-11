@@ -50,7 +50,7 @@ module.exports = () => {
       const response = JSON.parse(ctx.body);
       const currentTime = new Date().toLocaleTimeString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' });
       console.log(`[${currentTime}]-------GraphQL 中间件拦截查询结果-------`);
-      console.log(response);
+      console.dir(response, { depth: null });
       // 在控制台输出错误，并记录到日志
       if (response.errors) {
         // 生成标准结构的错误信息

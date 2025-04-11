@@ -178,8 +178,7 @@ extend type Query {
 
   # 以下是 service.plan.courseScheduleManager 的相关操作
   # 查询某个教师某学期的完整课表
-  getFullScheduleByStaff(input:FullScheduleInput!): [CourseSchedule]!
-
+  getFullScheduleByStaff(input:FullScheduleInput!): [FlatScheduleItem]!
   # 查询某教师某天的课表
   getDailySchedule(input:DailyScheduleInput!): [FlatScheduleItem]!
   

@@ -6,6 +6,7 @@ type Semester {
   termNumber: Int!
   name: String!
   startDate: String!
+  firstTeachingDate: String!
   examStartDate: String!
   endDate: String!
   isCurrent: Boolean!
@@ -17,6 +18,7 @@ input CreateSemesterInput {
   termNumber: Int!
   name: String!
   startDate: String!
+  firstTeachingDate: String!
   examStartDate: String!
   endDate: String!
   isCurrent: Boolean!
@@ -28,6 +30,7 @@ input UpdateSemesterInput {
   termNumber: Int
   name: String
   startDate: String
+  FirstTeachingDate: String
   examStartDate: String
   endDate: String
   isCurrent: Boolean

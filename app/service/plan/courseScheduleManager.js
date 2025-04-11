@@ -180,16 +180,15 @@ class CourseScheduleManagerService extends Service {
   async getFullScheduleByStaff({ staffId, semesterId }) {
     // 查询与 staffId、semesterId 匹配的所有 CourseSchedule，并关联 slots
     const schedules = await this.ctx.model.Plan.CourseSchedule.findAll({
+      log: true,
       where: { staffId, semesterId },
       include: [{
         model: this.ctx.model.Plan.CourseSlot,
         as: 'slots',
       }],
     });
-
-    // const result = this._flattenSchedules(schedules);
-
-    return schedules;
+    const result = this._flattenSchedules(schedules);
+    return result;
   }
 
   /**
@@ -233,6 +232,7 @@ class CourseScheduleManagerService extends Service {
     });
     // 扁平化并筛选当天实际应上的课程（考虑调休）
     const allSlots = this._flattenSchedules(schedules);
+    console.log(allSlots);
     return allSlots.filter(s => s.dayOfWeek === dayOfWeek);
   }
 
