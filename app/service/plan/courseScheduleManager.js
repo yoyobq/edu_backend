@@ -332,12 +332,12 @@ class CourseScheduleManagerService extends Service {
   /**
    * 计算教职工在指定学期内因假期取消的课程
    * @param {Object} param - 参数对象
-   * @param {number} param.staffId - 教职工ID（优先使用）
-   * @param {number} [param.sstsTeacherId] - 校园网教职工ID（当 staffId 为 0 时使用）
+   * @param {number|Array<number>} param.staffId - 教职工ID（优先使用），可以是单个ID或ID数组
+   * @param {string|Array<string>} [param.sstsTeacherId] - 校园网教职工ID，可以是单个ID或ID数组
    * @param {Object} param.semester - 学期对象，包含 firstTeachingDate、endDate、id 等
    * @param {Array<number>} param.weeks - 要过滤的周数范围，如 [12,16] 表示12周到16周
    * @param {Array<Object>} param.events - 必传，校历事件列表
-   * @return {Promise<Object>} - 取消的课程信息及统计
+   * @return {Promise<Object|Array<Object>>} - 取消的课程信息及统计，如果传入数组则返回数组
    */
   async calculateCancelledCourses({ staffId = 0, sstsTeacherId, semester, weeks, events }) {
     // 提取所有停课事件
@@ -351,20 +351,99 @@ class CourseScheduleManagerService extends Service {
       cancelDates :
       cancelDates.filter(date => !makeupDays.includes(date));
 
-    // 获取该教师在该学期的所有课程安排及其时段
+    // 检查是否传入了数组
+    const isStaffIdArray = Array.isArray(staffId);
+    const isSstsTeacherIdArray = Array.isArray(sstsTeacherId);
+
+    // 构建查询条件
+    const whereCondition = { semesterId: semester.id };
+
+    if (staffId && (isStaffIdArray ? staffId.length > 0 : staffId !== 0)) {
+      whereCondition.staffId = isStaffIdArray ? staffId : staffId;
+    } else if (sstsTeacherId && (isSstsTeacherIdArray ? sstsTeacherId.length > 0 : sstsTeacherId)) {
+      whereCondition.sstsTeacherId = isSstsTeacherIdArray ? sstsTeacherId : sstsTeacherId;
+    }
+
+    // 获取教师在该学期的所有课程安排及其时段
     const schedules = await this.ctx.model.Plan.CourseSchedule.findAll({
-      where: {
-        semesterId: semester.id,
-        ...(staffId ? { staffId } : { sstsTeacherId }),
-      },
+      where: whereCondition,
       include: [{
         model: this.ctx.model.Plan.CourseSlot,
         as: 'slots',
       }],
     });
 
-    // 先扁平化处理，以便正确处理周数判断
+    // 如果传入的是数组，则按教师分组处理
+    if (isStaffIdArray || isSstsTeacherIdArray) {
+      // 按教师ID分组
+      const schedulesByTeacher = {};
+
+      schedules.forEach(schedule => {
+        const key = staffId ? schedule.staffId : schedule.sstsTeacherId;
+        if (!schedulesByTeacher[key]) {
+          schedulesByTeacher[key] = [];
+        }
+        schedulesByTeacher[key].push(schedule);
+      });
+
+      // 为每个教师计算取消的课程
+      const results = [];
+
+      for (const teacherId in schedulesByTeacher) {
+        const teacherSchedules = schedulesByTeacher[teacherId];
+        if (!teacherSchedules.length) continue;
+
+        // 获取教师信息
+        const { staffId: tStaffId, sstsTeacherId: tSstsTeacherId, staffName } = teacherSchedules[0];
+
+        // 扁平化处理该教师的课程安排
+        const flatSchedules = this._flattenSchedules(teacherSchedules);
+        const teacherCancelledCourses = await this._processCancelledDates({
+          flatSchedules,
+          finalCancelDates,
+          makeupDays,
+          events,
+          semester,
+          weeks,
+        });
+
+        // 添加教师信息
+        results.push({
+          staffId: tStaffId,
+          sstsTeacherId: tSstsTeacherId,
+          staffName,
+          cancelledCourses: teacherCancelledCourses,
+        });
+      }
+
+      return results;
+    }
+    // 单个教师的情况，保持原有逻辑
     const flatSchedules = this._flattenSchedules(schedules);
+    return await this._processCancelledDates({
+      flatSchedules,
+      finalCancelDates,
+      makeupDays,
+      events,
+      semester,
+      weeks,
+    });
+
+  }
+
+  /**
+   * 处理取消的课程日期（内部辅助方法）
+   * @private
+   * @param {Object} param - 参数对象
+   * @param {Array} param.flatSchedules - 扁平化的课程安排
+   * @param {Array} param.finalCancelDates - 最终的取消日期列表
+   * @param {Array} param.makeupDays - 调课日期列表
+   * @param {Array} param.events - 校历事件列表
+   * @param {Object} param.semester - 学期信息
+   * @param {Array} param.weeks - 周数范围
+   * @return {Promise<Array>} - 处理后的取消课程信息
+   */
+  async _processCancelledDates({ flatSchedules, finalCancelDates, makeupDays, events, semester, weeks }) {
     let cancelledCourses = [];
 
     for (const date of finalCancelDates) {
@@ -403,7 +482,7 @@ class CourseScheduleManagerService extends Service {
         dateInfo.note = `该日课程已调至 ${makeupEvent.date}，相关课时和费用都计入实际上课日期 `;
       }
 
-      // 格式化返回数据，与 listActualTeachingDates 保持一致
+      // 格式化返回数据
       if (coursesForDay.length > 0) {
         // 转换为前端需要的格式
         dateInfo.courses = coursesForDay.map(course => ({

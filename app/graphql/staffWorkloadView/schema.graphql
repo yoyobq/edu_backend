@@ -26,6 +26,32 @@ type TeachingWorkloadItem {
   workloadHours: Float! # ＝ weeklyHours × weekCount × coefficient
 }
 
+# 表示教师的扣课信息
+type StaffCancelledCourses {
+  # 教职工的唯一标识符
+  staffId: ID!
+  # 校园网教师工号
+  sstsTeacherId: String
+  # 教职工姓名
+  staffName: String!
+  # 课程-班级扣课信息
+  items: [CancelledCourseItem!]!
+  # 总扣课时数
+  totalCancelledHours: Float!
+}
+
+# 表示单个扣课项目的详细信息
+type CancelledCourseItem {
+  # 课程名称
+  courseName: String!
+  # 教学班级名称
+  teachingClassName: String!
+  # 扣课日期信息（键为日期+周次+星期几，值为扣课时数）
+  dates: JSON!
+  # 总扣课时数
+  total: Float!
+}
+
 # 多个教师工作量的筛选输入
 input StaffWorkloadInput {
   semesterId: ID!
@@ -40,6 +66,21 @@ input StaffWorkloadSingleInput {
   sstsTeacherId: String
 }
 
+# 扣课信息查询输入
+input CancelledCoursesInput {
+  semesterId: ID!
+  staffIds: [Int!]
+  sstsTeacherIds: [String!]
+  weeks: [Int!]
+}
+
+# 单个教师扣课信息查询输入
+input CancelledCoursesSingleInput {
+  semesterId: ID!
+  staffId: Int
+  sstsTeacherId: String
+  weeks: [Int!]
+}
 
 extend type Query {
   # 获取多个教师工作量
@@ -47,4 +88,10 @@ extend type Query {
 
   # 获取单个教师工作量
   staffWorkload(input: StaffWorkloadSingleInput!): StaffWorkload
+
+  # 获取多个教师的扣课信息
+  staffsCancelledCourses(input: CancelledCoursesInput!): [StaffCancelledCourses!]!
+
+  # 获取单个教师的扣课信息
+  staffCancelledCourses(input: CancelledCoursesSingleInput!): StaffCancelledCourses
 }

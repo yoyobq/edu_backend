@@ -13,9 +13,19 @@ module.exports = {
       return await ctx.connector.staffWorkloadView.getStaffWorkloads(input);
     },
 
-    //
+    // 查询单个教师的工作量
     async staffWorkload(_, { input }, ctx) {
       return await ctx.connector.staffWorkloadView.getStaffWorkload(input);
+    },
+
+    // 查询多个教师的扣课信息
+    async staffsCancelledCourses(_, { input }, ctx) {
+      return await ctx.connector.staffWorkloadView.getCancelledCoursesForStaffs(input);
+    },
+
+    // 查询单个教师的扣课信息
+    async staffCancelledCourses(_, { input }, ctx) {
+      return await ctx.connector.staffWorkloadView.getCancelledCoursesForStaff(input);
     },
   },
 };
