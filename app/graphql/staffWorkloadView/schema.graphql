@@ -34,22 +34,60 @@ type StaffCancelledCourses {
   sstsTeacherId: String
   # 教职工姓名
   staffName: String!
-  # 课程-班级扣课信息
-  items: [CancelledCourseItem!]!
+  # 扣课日期列表
+  cancelledDates: [CancelledDate!]!
   # 总扣课时数
   totalCancelledHours: Float!
+  # 教师课程安排列表（按课程ID分组后的简化信息）
+  flatSchedules: [CourseScheduleSummary!]
 }
 
-# 表示单个扣课项目的详细信息
-type CancelledCourseItem {
+# 课程安排摘要信息
+type CourseScheduleSummary {
+  # 课程表ID
+  scheduleId: ID!
   # 课程名称
   courseName: String!
   # 教学班级名称
   teachingClassName: String!
-  # 扣课日期信息（键为日期+周次+星期几，值为扣课时数）
-  dates: JSON!
-  # 总扣课时数
-  total: Float!
+  # 教学周数
+  weekCount: Int!
+  # 每周教学时数
+  weeklyHours: Float!
+}
+
+# 表示单个扣课日期的详细信息
+type CancelledDate {
+  # 日期，格式为 YYYY-MM-DD
+  date: String!
+  # 星期几 (1-7)
+  weekOfDay: Int!
+  # 学期第几周
+  weekNumber: Int!
+  # 该日期下被取消的课程列表
+  courses: [CancelledCourse!]!
+}
+
+# 表示单个被取消的课程
+type CancelledCourse {
+  # 课程安排ID
+  scheduleId: ID!
+  # 课程名称
+  courseName: String!
+  # 课时ID
+  slotId: ID!
+  # 开始节次
+  periodStart: Int!
+  # 结束节次
+  periodEnd: Int!
+  # 周类型 (ALL, ODD, EVEN)
+  weekType: String!
+  # 工作量系数
+  coefficient: String!
+  # 扣课时数
+  cancelledHours: Float!
+  # 教学班级名称（可选）
+  teachingClassName: String
 }
 
 # 多个教师工作量的筛选输入

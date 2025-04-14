@@ -52,7 +52,6 @@
  */
 
 const _ = require('lodash');
-const moment = require('moment');
 
 class StaffWorkLoadViewConnector {
   constructor(ctx) {
@@ -155,6 +154,7 @@ class StaffWorkLoadViewConnector {
       };
     });
   }
+
   /**
    * 获取单个教师的工作量信息
    * @param {Object} input 查询条件（semesterId + staffId/sstsTeacherId）
@@ -169,6 +169,7 @@ class StaffWorkLoadViewConnector {
     });
     return workloads.length ? workloads[0] : null;
   }
+
   /**
    * 批量获取多个教师的扣课信息
    * @param {Object} param - 参数对象
@@ -180,7 +181,6 @@ class StaffWorkLoadViewConnector {
    */
   async getCancelledCoursesForStaffs({ semesterId, staffIds = [], sstsTeacherIds = [], weeks }) {
     const { ctx } = this;
-    const results = [];
 
     // 获取学期信息
     const semester = await ctx.model.Plan.Semester.findByPk(semesterId);
@@ -194,160 +194,73 @@ class StaffWorkLoadViewConnector {
       },
     });
 
-    // 确定要查询的教师列表
-    let teachers = [];
-    if (!staffIds.length && !sstsTeacherIds.length) {
-      // 如果未指定教师，获取该学期所有有课程安排的教师
-      teachers = await ctx.model.Plan.CourseSchedule.findAll({
-        where: { semesterId },
-        attributes: [ 'sstsTeacherId', 'staffId', 'staffName' ],
-        group: [ 'sstsTeacherId' ], // 主要按sstsTeacherId分组
-        raw: true,
-      });
-    } else if (sstsTeacherIds.length > 0) {
-      // 优先按 sstsTeacherIds 查询
-      teachers = await ctx.model.Plan.CourseSchedule.findAll({
-        where: {
-          sstsTeacherId: sstsTeacherIds,
-          semesterId,
-        },
-        attributes: [ 'staffId', 'sstsTeacherId', 'staffName' ],
-        group: [ 'sstsTeacherId' ],
-        raw: true,
-      });
-    } else if (staffIds.length > 0) {
-      // 其次按 staffIds 查询
-      teachers = await ctx.model.Plan.CourseSchedule.findAll({
-        where: {
-          staffId: staffIds,
-          semesterId,
-        },
-        attributes: [ 'staffId', 'sstsTeacherId', 'staffName' ],
-        group: [ 'sstsTeacherId' ], // 仍然按sstsTeacherId分组
-        raw: true,
-      });
+    // 构建查询条件
+    const whereCondition = { semesterId };
+
+    // 如果指定了教师ID，添加到查询条件中
+    if (staffIds.length > 0) {
+      whereCondition.staffId = staffIds;
     }
 
-    // 计算每个教师的扣课信息
-    for (const teacher of teachers) {
-      const { sstsTeacherId, staffId, staffName } = teacher;
+    // 如果指定了校园网教师工号，添加到查询条件中
+    if (sstsTeacherIds.length > 0) {
+      whereCondition.sstsTeacherId = sstsTeacherIds;
+    }
 
-      // 直接使用已有的 calculateCancelledCourses 方法获取取消的课程
-      const cancelledCourses = await this.ctx.service.plan.courseScheduleManager.calculateCancelledCourses({
-        staffId,
-        sstsTeacherId,
-        semester,
-        weeks,
-        events,
-      });
+    // 一次性计算所有教师的扣课信息
+    const allCancelledCourses = await this.ctx.service.plan.courseScheduleManager.calculateCancelledCourses({
+      // 如果既没有指定staffIds也没有指定sstsTeacherIds，则传入undefined表示获取所有教师数据
+      staffId: staffIds.length > 0 ? staffIds : (sstsTeacherIds.length > 0 ? 0 : undefined),
+      sstsTeacherId: sstsTeacherIds.length > 0 ? sstsTeacherIds : undefined,
+      semester,
+      weeks,
+      events,
+    });
 
-      // 如果没有取消的课程，跳过
-      if (!cancelledCourses.length) continue;
+    // 如果没有结果，抛出异常（此情况基本不会发生）
+    if (!allCancelledCourses) {
+      ctx.throw(404, `未查到 semesterId 为 ${semester.name} 的相关扣课记录`);
+    }
+
+    // 处理结果
+    const results = [];
+    console.dir(allCancelledCourses, { depth: null });
+
+    for (const teacherData of allCancelledCourses) {
+      const { staffId, sstsTeacherId, staffName, cancelledCourses, flatSchedules } = teacherData;
 
       // 计算总扣课时数并格式化数据
       let totalCancelledHours = 0;
+      // 保留所有日期信息，不过滤掉没有课程的日期
       const formattedCancelledDates = cancelledCourses.map(dateInfo => {
-        // 只处理有课程的日期
-        if (dateInfo.courses && dateInfo.courses.length > 0) {
-          // 为每个课程添加扣课时数字段和教学班级名称
+        // 确保有 courses 数组
+        dateInfo.courses = dateInfo.courses || [];
+
+        // 处理课程信息并计算总课时
+        if (dateInfo.courses.length > 0) {
           dateInfo.courses.forEach(course => {
             const hours = (course.periodEnd - course.periodStart + 1) * course.coefficient;
             course.cancelledHours = parseFloat(hours.toFixed(1));
             totalCancelledHours += hours;
           });
-          return dateInfo;
         }
-        return null;
-      }).filter(Boolean); // 过滤掉没有课程的日期
 
-      if (formattedCancelledDates.length > 0) {
-        results.push({
-          staffId,
-          sstsTeacherId,
-          staffName,
-          cancelledDates: formattedCancelledDates,
-          totalCancelledHours: parseFloat(totalCancelledHours.toFixed(1)),
-        });
-      }
+        return dateInfo;
+      });
+
+
+      // 不再过滤结果，总是添加教师数据，并包含简化后的flatSchedules
+      results.push({
+        staffId,
+        sstsTeacherId,
+        staffName,
+        cancelledDates: formattedCancelledDates,
+        totalCancelledHours: parseFloat(totalCancelledHours.toFixed(1)),
+        flatSchedules,
+      });
     }
 
-    // 使用格式化方法处理结果，使其更适合前端展示
-    return this._formatCancelledCoursesForTable(results);
-  }
-
-  /**
-   * 格式化扣课数据为表格展示格式
-   * @private
-   * @param {Array} cancelledCoursesData - 原始扣课数据
-   * @return {Array} 格式化后的扣课数据，适合表格展示
-   */
-  _formatCancelledCoursesForTable(cancelledCoursesData) {
-    const tableData = [];
-
-    // 遍历每个教师
-    cancelledCoursesData.forEach(staffData => {
-      const { staffId, sstsTeacherId, staffName, cancelledDates } = staffData;
-
-      // 用于存储该教师的所有课程-班级组合
-      const courseClassMap = new Map();
-
-      // 首先收集所有唯一的课程-班级组合
-      cancelledDates.forEach(dateInfo => {
-        dateInfo.courses.forEach(course => {
-          // 使用课程名称和教学班级作为键
-          const key = `${course.courseName}-${course.teachingClassName || ''}`;
-          if (!courseClassMap.has(key)) {
-            courseClassMap.set(key, {
-              courseName: course.courseName,
-              teachingClassName: course.teachingClassName || '',
-              dates: {},
-              totalHours: 0,
-            });
-          }
-
-          // 添加日期信息
-          const dateKey = dateInfo.date;
-          const formattedDate = `${moment(dateKey).format('M月D日')}`;
-          const weekInfo = `第${dateInfo.weekNumber}周 周${this._getChineseWeekday(dateInfo.weekOfDay)}`;
-
-          if (!courseClassMap.get(key).dates[dateKey]) {
-            courseClassMap.get(key).dates[dateKey] = {
-              date: formattedDate,
-              weekInfo,
-              hours: 0,
-            };
-          }
-
-          // 累加课时
-          courseClassMap.get(key).dates[dateKey].hours += course.cancelledHours;
-          courseClassMap.get(key).totalHours += course.cancelledHours;
-        });
-      });
-
-      // 转换为表格行数据
-      courseClassMap.forEach(courseData => {
-        // 基础行信息
-        const baseRow = {
-          staffId,
-          sstsTeacherId,
-          staffName,
-          courseName: courseData.courseName,
-          teachingClassName: courseData.teachingClassName,
-          total: courseData.totalHours,
-        };
-
-        // 添加每个日期的扣课信息
-        Object.entries(courseData.dates).forEach(([ dateData ]) => {
-          // 创建日期列的键名
-          const columnKey = `${dateData.date}\n${dateData.weekInfo}`;
-          baseRow[columnKey] = -dateData.hours; // 使用负数表示扣课
-        });
-
-        tableData.push(baseRow);
-      });
-    });
-
-    return tableData;
+    return results;
   }
 
   /**
@@ -372,14 +285,14 @@ class StaffWorkLoadViewConnector {
 
 
   /**
-   * 获取单个教师的扣课课时表
-   * @param {Object} input 查询条件
-   * @param {number} input.semesterId - 学期 ID
-   * @param {number} [input.staffId] - 教师 Id（可选）
-   * @param {string} [input.sstsTeacherId] - ssts 中教师工号（可选）
-   * @param {number[]} [input.weeks] - 周次数组（可选）
-   * @return {Promise<Object|null>} 返回单个教师的扣课课时表数据或null
-   */
+     * 获取单个教师的扣课课时表
+     * @param {Object} input 查询条件
+     * @param {number} input.semesterId - 学期 ID
+     * @param {number} [input.staffId] - 教师 Id（可选）
+     * @param {string} [input.sstsTeacherId] - ssts 中教师工号（可选）
+     * @param {number[]} [input.weeks] - 周次数组（可选）
+     * @return {Promise<Object|null>} 返回单个教师的扣课课时表数据或null
+     */
   async getStaffCancelledCourses(input) {
     const cancelledInfos = await this.getStaffsCancelledCourses({
       semesterId: input.semesterId,
@@ -389,17 +302,6 @@ class StaffWorkLoadViewConnector {
     });
 
     return cancelledInfos.length ? cancelledInfos[0] : null;
-  }
-
-  /**
-   * 将数字星期几转换为中文
-   * @private
-   * @param {number} weekday - 星期几 (1-7)
-   * @return {string} 中文星期几
-   */
-  _getChineseWeekday(weekday) {
-    const weekdays = [ '一', '二', '三', '四', '五', '六', '日' ];
-    return weekdays[weekday - 1] || '';
   }
 }
 

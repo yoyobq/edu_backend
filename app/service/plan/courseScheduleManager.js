@@ -8,6 +8,7 @@
 
 const { Service } = require('egg');
 const moment = require('moment');
+const _ = require('lodash');
 
 class CourseScheduleManagerService extends Service {
   /**
@@ -231,7 +232,6 @@ class CourseScheduleManagerService extends Service {
     });
     // 扁平化并筛选当天实际应上的课程（考虑调休）
     const allSlots = this._flattenSchedules(schedules);
-    console.log(allSlots);
     return allSlots.filter(s => s.dayOfWeek === dayOfWeek);
   }
 
@@ -330,6 +330,51 @@ class CourseScheduleManagerService extends Service {
   }
 
   /**
+   * 获取教师在指定学期的课程安排
+   * @private
+   * @param {Object} param - 参数对象
+   * @param {number|Array<number>} param.staffId - 教职工ID（优先使用），可以是单个ID或ID数组
+   * @param {string|Array<string>} [param.sstsTeacherId] - 校园网教职工ID，可以是单个ID或ID数组
+   * @param {number} param.semesterId - 学期ID
+   * @return {Promise<Object>} - 按教师ID分组的课程安排
+   */
+  async _getTeacherSchedules({ staffId = 0, sstsTeacherId, semesterId }) {
+    // 构建查询条件
+    const whereCondition = { semesterId };
+
+    // 只有当明确指定了staffId或sstsTeacherId时，才添加到查询条件中
+    const isStaffIdArray = Array.isArray(staffId);
+    const isSstsTeacherIdArray = Array.isArray(sstsTeacherId);
+
+    if (staffId && (isStaffIdArray ? staffId.length > 0 : staffId !== 0)) {
+      whereCondition.staffId = isStaffIdArray ? staffId : staffId;
+    } else if (sstsTeacherId && (isSstsTeacherIdArray ? sstsTeacherId.length > 0 : sstsTeacherId)) {
+      whereCondition.sstsTeacherId = isSstsTeacherIdArray ? sstsTeacherId : sstsTeacherId;
+    }
+
+    // 获取教师在该学期的所有课程安排及其时段
+    const schedules = await this.ctx.model.Plan.CourseSchedule.findAll({
+      where: whereCondition,
+      include: [{
+        model: this.ctx.model.Plan.CourseSlot,
+        as: 'slots',
+      }],
+    });
+
+    // 按教师ID分组
+    const schedulesByTeacher = {};
+    schedules.forEach(schedule => {
+      const key = staffId ? schedule.staffId : schedule.sstsTeacherId;
+      if (!schedulesByTeacher[key]) {
+        schedulesByTeacher[key] = [];
+      }
+      schedulesByTeacher[key].push(schedule);
+    });
+
+    return schedulesByTeacher;
+  }
+
+  /**
    * 计算教职工在指定学期内因假期取消的课程
    * @param {Object} param - 参数对象
    * @param {number|Array<number>} param.staffId - 教职工ID（优先使用），可以是单个ID或ID数组
@@ -351,84 +396,61 @@ class CourseScheduleManagerService extends Service {
       cancelDates :
       cancelDates.filter(date => !makeupDays.includes(date));
 
-    // 检查是否传入了数组
-    const isStaffIdArray = Array.isArray(staffId);
-    const isSstsTeacherIdArray = Array.isArray(sstsTeacherId);
-
-    // 构建查询条件
-    const whereCondition = { semesterId: semester.id };
-
-    if (staffId && (isStaffIdArray ? staffId.length > 0 : staffId !== 0)) {
-      whereCondition.staffId = isStaffIdArray ? staffId : staffId;
-    } else if (sstsTeacherId && (isSstsTeacherIdArray ? sstsTeacherId.length > 0 : sstsTeacherId)) {
-      whereCondition.sstsTeacherId = isSstsTeacherIdArray ? sstsTeacherId : sstsTeacherId;
-    }
-
-    // 获取教师在该学期的所有课程安排及其时段
-    const schedules = await this.ctx.model.Plan.CourseSchedule.findAll({
-      where: whereCondition,
-      include: [{
-        model: this.ctx.model.Plan.CourseSlot,
-        as: 'slots',
-      }],
+    // 获取教师课程安排
+    const schedulesByTeacher = await this._getTeacherSchedules({
+      staffId,
+      sstsTeacherId,
+      semesterId: semester.id,
     });
 
-    // 如果传入的是数组，则按教师分组处理
-    if (isStaffIdArray || isSstsTeacherIdArray) {
-      // 按教师ID分组
-      const schedulesByTeacher = {};
+    // 为每个教师计算取消的课程
+    const results = [];
 
-      schedules.forEach(schedule => {
-        const key = staffId ? schedule.staffId : schedule.sstsTeacherId;
-        if (!schedulesByTeacher[key]) {
-          schedulesByTeacher[key] = [];
-        }
-        schedulesByTeacher[key].push(schedule);
+    for (const teacherId in schedulesByTeacher) {
+      const teacherSchedules = schedulesByTeacher[teacherId];
+      // if (!teacherSchedules.length) continue;
+
+      // 获取教师信息
+      const { staffId: tStaffId, sstsTeacherId: tSstsTeacherId, staffName } = teacherSchedules[0];
+
+      // 扁平化处理该教师的课程安排
+      const flatSchedules = this._flattenSchedules(teacherSchedules);
+      const teacherCancelledCourses = await this._processCancelledDates({
+        flatSchedules,
+        finalCancelDates,
+        makeupDays,
+        events,
+        semester,
+        weeks,
       });
 
-      // 为每个教师计算取消的课程
-      const results = [];
+      // 使用 lodash 整合相同 scheduleId 的数据
+      const simplifiedFlatSchedules = _(flatSchedules)
+        .groupBy('scheduleId')
+        .map(group => {
+          // 取第一个元素的基本信息
+          const first = group[0];
+          return {
+            scheduleId: first.scheduleId,
+            courseName: first.courseName,
+            teachingClassName: first.teachingClassName,
+            weekCount: first.weekCount,
+            weeklyHours: first.weeklyHours,
+          };
+        })
+        .value();
 
-      for (const teacherId in schedulesByTeacher) {
-        const teacherSchedules = schedulesByTeacher[teacherId];
-        if (!teacherSchedules.length) continue;
-
-        // 获取教师信息
-        const { staffId: tStaffId, sstsTeacherId: tSstsTeacherId, staffName } = teacherSchedules[0];
-
-        // 扁平化处理该教师的课程安排
-        const flatSchedules = this._flattenSchedules(teacherSchedules);
-        const teacherCancelledCourses = await this._processCancelledDates({
-          flatSchedules,
-          finalCancelDates,
-          makeupDays,
-          events,
-          semester,
-          weeks,
-        });
-
-        // 添加教师信息
-        results.push({
-          staffId: tStaffId,
-          sstsTeacherId: tSstsTeacherId,
-          staffName,
-          cancelledCourses: teacherCancelledCourses,
-        });
-      }
-
-      return results;
+      // 添加教师信息
+      results.push({
+        staffId: tStaffId,
+        sstsTeacherId: tSstsTeacherId,
+        staffName,
+        cancelledCourses: teacherCancelledCourses,
+        flatSchedules: simplifiedFlatSchedules,
+      });
     }
-    // 单个教师的情况，保持原有逻辑
-    const flatSchedules = this._flattenSchedules(schedules);
-    return await this._processCancelledDates({
-      flatSchedules,
-      finalCancelDates,
-      makeupDays,
-      events,
-      semester,
-      weeks,
-    });
 
+    return results;
   }
 
   /**
