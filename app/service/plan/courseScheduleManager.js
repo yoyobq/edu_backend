@@ -33,9 +33,8 @@ class CourseScheduleManagerService extends Service {
       });
     }
 
-    // 提前创建日期对象并标准化星期几 (0=周日→7)
-    const dateObj = new Date(date);
-    const normalizeWeekday = day => (day === 0 ? 7 : day);
+    // 使用 moment 获取星期几 (1-7，周一为1，周日为7)
+    const dateObj = moment(date);
 
     // 查找相关事件，使用 teachingCalcEffect 字段而不是 eventType 来判断
     const swapEvent = events.find(e => e.teachingCalcEffect === 'SWAP' && e.date === date);
@@ -47,7 +46,7 @@ class CourseScheduleManagerService extends Service {
       const { originalDate } = swapEvent || makeupEvent;
       return {
         isClassDay: true,
-        dayOfWeek: normalizeWeekday(new Date(originalDate).getDay()),
+        dayOfWeek: moment(originalDate).isoWeekday(), // 使用 isoWeekday 获取周一为1的星期几
       };
     }
 
@@ -61,15 +60,15 @@ class CourseScheduleManagerService extends Service {
       return {
         isClassDay: false,
         dayOfWeek: swapTarget
-          ? normalizeWeekday(new Date(swapTarget.date).getDay())
-          : normalizeWeekday(dateObj.getDay()),
+          ? moment(swapTarget.date).isoWeekday()
+          : dateObj.isoWeekday(),
       };
     }
 
     // 默认情况
     return {
       isClassDay: true,
-      dayOfWeek: normalizeWeekday(dateObj.getDay()),
+      dayOfWeek: dateObj.isoWeekday(),
     };
   }
 
@@ -136,7 +135,7 @@ class CourseScheduleManagerService extends Service {
    * @private
    * @param {Array} data - 要过滤的数据数组（包含date字段的对象数组）
    * @param {Object} semester - 学期对象，包含 firstTeachingDate、endDate、id 等
-   * @param {Array(number)} weeks - 要过滤的月份，格式为"YYYY-MM"
+   * @param {Array(number)} weeks - 要过滤的周数范围
    * @return {Array} - 过滤后的数据
    */
   _filterByTeachingWeek(data, semester, weeks) {
@@ -145,14 +144,13 @@ class CourseScheduleManagerService extends Service {
     }
 
     const [ startWeek, endWeek ] = weeks;
-    const firstTeachingDate = new Date(semester.firstTeachingDate);
+    const firstTeachingDate = moment(semester.firstTeachingDate);
 
     return data.filter(item => {
-      // 计算当前日期是学期第几周
-      const currentDate = new Date(item.date);
-      const weekDiff = Math.floor(
-        (currentDate - firstTeachingDate) / (7 * 24 * 60 * 60 * 1000)
-      ) + 1; // 转换为1-based周数
+      // 使用 moment 计算当前日期是学期第几周
+      const currentDate = moment(item.date);
+      const dayDiff = currentDate.diff(firstTeachingDate, 'days');
+      const weekDiff = Math.floor(dayDiff / 7) + 1; // 转换为1-based周数
 
       return weekDiff >= startWeek && weekDiff <= endWeek;
     });
@@ -236,10 +234,10 @@ class CourseScheduleManagerService extends Service {
   }
 
   /**
-   * 精确列出某教职工在指定学期内实际要上课的所有日期及课程
+   * 精确列出某staffId在指定学期内实际要上课的所有日期及课程
    * @param {Object} param - 参数对象
    * @param {number} param.staffId - 教职工ID
-   * @param {number} param.sstsTeacherId - 校园网教职工ID
+   * @param {number} param.sstsTeacherId - 校园网taffId
    * @param {Object} param.semester - 学期对象，包含 firstTeachingDate、endDate、id 等
    * @param {Array<Object>} param.events - 必传，校历事件列表
    * @param {Array<number>} param.weeks - 要过滤的周数范围，如 [12,16] 表示12周到16周
@@ -280,8 +278,10 @@ class CourseScheduleManagerService extends Service {
       }
 
       // 计算当前日期是学期第几周
-      // 通过计算与学期第一教学日的差值，除以一周的毫秒数
-      const weekDiff = Math.floor((currentDate - new Date(semester.firstTeachingDate)) / (7 * 24 * 60 * 60 * 1000));
+      // 使用 moment 计算周数
+      const weekDiff = Math.floor(
+        moment(currentDate).diff(moment(semester.firstTeachingDate), 'days') / 7
+      );
 
       // 收集当天所有课程时段
       const slotsForTheDay = [];
@@ -330,25 +330,29 @@ class CourseScheduleManagerService extends Service {
   }
 
   /**
-   * 获取教师在指定学期的课程安排
-   * @private
+   * 获取教师在指定学期的简化课程安排
    * @param {Object} param - 参数对象
    * @param {number|Array<number>} param.staffId - 教职工ID（优先使用），可以是单个ID或ID数组
-   * @param {string|Array<string>} [param.sstsTeacherId] - 校园网教职工ID，可以是单个ID或ID数组
-   * @param {number} param.semesterId - 学期ID
-   * @return {Promise<Object>} - 按教师ID分组的课程安排
+   * @param {string|Array<string>} [param.sstsTeacherId] - 校园网taffId，可以是单个ID或ID数组
+   * @param {Object} param.semester - 学期对象，包含id等信息
+   * @param {Array<number>} [param.weeks] - 要过滤的周数范围，如 [12,16] 表示12周到16周
+   * @return {Promise<Object>} - 按教师ID分组的简化课程安排，包含扁平化的课表和简化的课表
    */
-  async _getTeacherSchedules({ staffId = 0, sstsTeacherId, semesterId }) {
+  async getSimpleTeacherSchedules({ staffId = 0, sstsTeacherId, semester, weeks = [] }) {
     // 构建查询条件
-    const whereCondition = { semesterId };
+    const whereCondition = { semesterId: semester.id };
 
-    // 只有当明确指定了staffId或sstsTeacherId时，才添加到查询条件中
+    // 处理查询条件，确保正确处理 staffId 和 sstsTeacherId
     const isStaffIdArray = Array.isArray(staffId);
     const isSstsTeacherIdArray = Array.isArray(sstsTeacherId);
 
+    // 如果有 staffId，添加到查询条件
     if (staffId && (isStaffIdArray ? staffId.length > 0 : staffId !== 0)) {
       whereCondition.staffId = isStaffIdArray ? staffId : staffId;
-    } else if (sstsTeacherId && (isSstsTeacherIdArray ? sstsTeacherId.length > 0 : sstsTeacherId)) {
+    }
+
+    // 如果有 sstsTeacherId，添加到查询条件（不再使用 else if，确保即使有 staffId 也能处理 sstsTeacherId）
+    if (sstsTeacherId && (isSstsTeacherIdArray ? sstsTeacherId.length > 0 : sstsTeacherId)) {
       whereCondition.sstsTeacherId = isSstsTeacherIdArray ? sstsTeacherId : sstsTeacherId;
     }
 
@@ -361,24 +365,103 @@ class CourseScheduleManagerService extends Service {
       }],
     });
 
-    // 按教师ID分组
-    const schedulesByTeacher = {};
+    // 按教师ID分组并处理数据
+    const result = {};
     schedules.forEach(schedule => {
       const key = staffId ? schedule.staffId : schedule.sstsTeacherId;
-      if (!schedulesByTeacher[key]) {
-        schedulesByTeacher[key] = [];
+      if (!result[key]) {
+        result[key] = {
+          staffId: schedule.staffId,
+          sstsTeacherId: schedule.sstsTeacherId,
+          staffName: schedule.staffName,
+          schedules: [],
+          flatSchedules: [],
+          simplifiedSchedules: [],
+        };
       }
-      schedulesByTeacher[key].push(schedule);
+      result[key].schedules.push(schedule);
     });
 
-    return schedulesByTeacher;
+    // 为每个教师处理扁平化和简化的课表
+    for (const teacherId in result) {
+      const teacherData = result[teacherId];
+      // 扁平化处理该教师的课程安排
+      const flatSchedules = this._flattenSchedules(teacherData.schedules);
+      teacherData.flatSchedules = flatSchedules;
+
+      // 使用 lodash 整合相同 scheduleId 的数据
+      teacherData.simplifiedSchedules = _(flatSchedules)
+        .groupBy('scheduleId')
+        .map(group => {
+          // 取第一个元素的基本信息
+          const first = group[0];
+          // 处理课程名称：去除前缀编码
+          let processedCourseName = first.courseName;
+          if (processedCourseName && processedCourseName.length > 10) {
+            const dashIndex = processedCourseName.substring(0, 10).indexOf('-');
+
+            if (dashIndex > 0) {
+              // 如果前10位中有'-'
+              if (/[a-zA-Z]/.test(processedCourseName.charAt(dashIndex - 1))) {
+                // 如果'-'前是字母，删除前10位
+                processedCourseName = processedCourseName.substring(10);
+              } else {
+                // 否则删除前9位
+                processedCourseName = processedCourseName.substring(9);
+              }
+            } else {
+              // 如果前10位没有'-'
+              if (processedCourseName.charAt(7) === 'G') {
+                // 如果第8位是'G'，删除前8位
+                processedCourseName = processedCourseName.substring(8);
+              } else {
+                // 否则删除前7位
+                processedCourseName = processedCourseName.substring(7);
+              }
+            }
+          }
+
+          // 计算实际教学周数
+          let actualWeekCount = first.weekCount;
+
+          // 如果提供了周数范围，计算该范围内的实际教学周数
+          if (weeks && weeks.length === 2) {
+            const [ startWeek, endWeek ] = weeks;
+            // 解析周数字符串，确定指定周数范围内有多少周有课
+            const weekNumberArray = first.weekNumberString.split(',').map(Number);
+
+            // 计算指定周数范围内有课的周数
+            let weeksWithClasses = 0;
+            for (let i = startWeek - 1; i < endWeek && i < weekNumberArray.length; i++) {
+              if (i >= 0 && weekNumberArray[i] === 1) {
+                weeksWithClasses++;
+              }
+            }
+
+            // 更新实际教学周数
+            actualWeekCount = weeksWithClasses;
+          }
+
+          return {
+            scheduleId: first.scheduleId,
+            courseName: processedCourseName,
+            teachingClassName: first.teachingClassName,
+            weekCount: actualWeekCount, // 使用计算后的实际教学周数
+            weeklyHours: first.weeklyHours,
+            coefficient: first.coefficient, // 添加系数字段
+          };
+        })
+        .value();
+    }
+
+    return result;
   }
 
   /**
    * 计算教职工在指定学期内因假期取消的课程
    * @param {Object} param - 参数对象
    * @param {number|Array<number>} param.staffId - 教职工ID（优先使用），可以是单个ID或ID数组
-   * @param {string|Array<string>} [param.sstsTeacherId] - 校园网教职工ID，可以是单个ID或ID数组
+   * @param {string|Array<string>} [param.sstsTeacherId] - 校园网taffId，可以是单个ID或ID数组
    * @param {Object} param.semester - 学期对象，包含 firstTeachingDate、endDate、id 等
    * @param {Array<number>} param.weeks - 要过滤的周数范围，如 [12,16] 表示12周到16周
    * @param {Array<Object>} param.events - 必传，校历事件列表
@@ -388,57 +471,61 @@ class CourseScheduleManagerService extends Service {
     // 提取所有停课事件
     const cancelDates = events.filter(e => e.teachingCalcEffect === 'CANCEL').map(e => e.date);
 
-    // 提取调课上课的原始日并从 cancelDates 中剔除
+    // 提取所有调课日期
     const makeupDays = events.filter(e => e.teachingCalcEffect === 'MAKEUP').map(e => e.originalDate);
 
-    // 如果指定了周数，输出中保留 makeupDays 中对应的日期和相关信息，避免因数据不全引起的误会
-    const finalCancelDates = Array.isArray(weeks) && weeks.length > 0 ?
-      cancelDates :
-      cancelDates.filter(date => !makeupDays.includes(date));
+    // 提取所有补课日期（被调入课程的日期）
+    const holidayMakeupDates = events.filter(e => e.teachingCalcEffect === 'MAKEUP').map(e => e.date);
 
-    // 获取教师课程安排
-    const schedulesByTeacher = await this._getTeacherSchedules({
+    // 获取教师课程安排（已包含扁平化和简化的数据）
+    const teacherSchedulesData = await this.getSimpleTeacherSchedules({
       staffId,
       sstsTeacherId,
-      semesterId: semester.id,
+      semester,
+      weeks,
     });
 
     // 为每个教师计算取消的课程
     const results = [];
 
-    for (const teacherId in schedulesByTeacher) {
-      const teacherSchedules = schedulesByTeacher[teacherId];
-      // if (!teacherSchedules.length) continue;
+    for (const teacherId in teacherSchedulesData) {
+      const teacherData = teacherSchedulesData[teacherId];
+      const { staffId: tStaffId, sstsTeacherId: tSstsTeacherId, staffName, flatSchedules, simplifiedSchedules } = teacherData;
 
-      // 获取教师信息
-      const { staffId: tStaffId, sstsTeacherId: tSstsTeacherId, staffName } = teacherSchedules[0];
+      // 如果指定了周数范围，过滤掉在该范围内没有课的课程
+      let filteredFlatSchedules = flatSchedules;
+      let filteredSimplifiedSchedules = simplifiedSchedules;
 
-      // 扁平化处理该教师的课程安排
-      const flatSchedules = this._flattenSchedules(teacherSchedules);
+      if (weeks && weeks.length === 2) {
+        const [ startWeek, endWeek ] = weeks;
+
+        // 过滤扁平化的课程列表
+        filteredFlatSchedules = flatSchedules.filter(schedule => {
+          // 解析周数字符串
+          const weekNumberArray = schedule.weekNumberString.split(',').map(Number);
+
+          // 检查在指定周数范围内是否有课
+          for (let i = startWeek - 1; i < endWeek && i < weekNumberArray.length; i++) {
+            if (i >= 0 && weekNumberArray[i] === 1) {
+              return true; // 只要在范围内有一周有课，就保留这门课
+            }
+          }
+          return false; // 在指定范围内没有任何一周有课，过滤掉
+        });
+
+        // 过滤简化的课程列表，只保留在指定周数范围内有课的课程
+        filteredSimplifiedSchedules = simplifiedSchedules.filter(course => course.weekCount > 0);
+      }
+
       const teacherCancelledCourses = await this._processCancelledDates({
-        flatSchedules,
-        finalCancelDates,
+        flatSchedules: filteredFlatSchedules,
+        cancelDates,
         makeupDays,
+        holidayMakeupDates, // 传入补课日期
         events,
         semester,
         weeks,
       });
-
-      // 使用 lodash 整合相同 scheduleId 的数据
-      const simplifiedFlatSchedules = _(flatSchedules)
-        .groupBy('scheduleId')
-        .map(group => {
-          // 取第一个元素的基本信息
-          const first = group[0];
-          return {
-            scheduleId: first.scheduleId,
-            courseName: first.courseName,
-            teachingClassName: first.teachingClassName,
-            weekCount: first.weekCount,
-            weeklyHours: first.weeklyHours,
-          };
-        })
-        .value();
 
       // 添加教师信息
       results.push({
@@ -446,7 +533,7 @@ class CourseScheduleManagerService extends Service {
         sstsTeacherId: tSstsTeacherId,
         staffName,
         cancelledCourses: teacherCancelledCourses,
-        flatSchedules: simplifiedFlatSchedules,
+        flatSchedules: filteredSimplifiedSchedules,
       });
     }
 
@@ -458,24 +545,27 @@ class CourseScheduleManagerService extends Service {
    * @private
    * @param {Object} param - 参数对象
    * @param {Array} param.flatSchedules - 扁平化的课程安排
-   * @param {Array} param.finalCancelDates - 最终的取消日期列表
+   * @param {Array} param.cancelDates - 取消日期列表
    * @param {Array} param.makeupDays - 调课日期列表
+   * @param {Array} param.holidayMakeupDates - 补课日期列表（被调入课程的日期）
    * @param {Array} param.events - 校历事件列表
    * @param {Object} param.semester - 学期信息
    * @param {Array} param.weeks - 周数范围
    * @return {Promise<Array>} - 处理后的取消课程信息
    */
-  async _processCancelledDates({ flatSchedules, finalCancelDates, makeupDays, events, semester, weeks }) {
+  async _processCancelledDates({ flatSchedules, cancelDates, makeupDays, holidayMakeupDates, events, semester, weeks }) {
     let cancelledCourses = [];
 
-    for (const date of finalCancelDates) {
+    // 处理常规取消日期
+    for (const date of cancelDates) {
       // 获取当天实际的星期几（已考虑调休）
       const { dayOfWeek } = await this._resolveClassDay({ date, events });
-      // 计算当前日期是学期第几周
+
+      // 使用 moment 计算当前日期是学期第几周
       const weekDiff = Math.floor(
-        (new Date(date) - new Date(semester.firstTeachingDate)) /
-        (7 * 24 * 60 * 60 * 1000)
+        moment(date).diff(moment(semester.firstTeachingDate), 'days') / 7
       );
+
       // 创建基础日期信息对象（无论是否有课都包含）
       const dateInfo = {
         date,
@@ -484,25 +574,41 @@ class CourseScheduleManagerService extends Service {
         courses: [], // 初始化为空数组
       };
 
-      let coursesForDay = [];
-      if (!makeupDays.includes(date)) {
-        // 筛选出当天应该上的课程（考虑周数和星期几）
-        coursesForDay = flatSchedules.filter(schedule => {
-          // 检查是否是当天的课程（星期几匹配）
-          if (schedule.dayOfWeek !== dayOfWeek) return false;
+      // 首先添加取消事件的备注
+      const cancelEvent = events.find(e =>
+        e.teachingCalcEffect === 'CANCEL' && e.date === date
+      );
+      if (cancelEvent && cancelEvent.topic) {
+        dateInfo.note = cancelEvent.topic;
+      }
 
-          // 检查当前周是否有课
-          const weekNumberArray = schedule.weekNumberString.split(',').map(Number);
-          return weekDiff >= 0 &&
-            weekDiff < weekNumberArray.length &&
-            weekNumberArray[weekDiff] === 1;
-        });
-      } else {
+      // 检查是否是调课日，如果是，添加说明
+      if (makeupDays.includes(date)) {
         const makeupEvent = events.find(e =>
           e.teachingCalcEffect === 'MAKEUP' && e.originalDate === date
         );
-        dateInfo.note = `该日课程已调至 ${makeupEvent.date}，相关课时和费用都计入实际上课日期 `;
+        if (makeupEvent) {
+          // 添加调课的特别说明，如果已有备注则追加
+          const makeupNote = `该日课程已调至 ${makeupEvent.date}，不计入课时`;
+          if (dateInfo.note) {
+            dateInfo.note += `。${makeupNote}`;
+          } else {
+            dateInfo.note = makeupNote;
+          }
+        }
       }
+
+      // 筛选出当天应该上的课程（考虑周数和星期几）
+      const coursesForDay = flatSchedules.filter(schedule => {
+        // 检查是否是当天的课程（星期几匹配）
+        if (schedule.dayOfWeek !== dayOfWeek) return false;
+
+        // 检查当前周是否有课
+        const weekNumberArray = schedule.weekNumberString.split(',').map(Number);
+        return weekDiff >= 0 &&
+          weekDiff < weekNumberArray.length &&
+          weekNumberArray[weekDiff] === 1;
+      });
 
       // 格式化返回数据
       if (coursesForDay.length > 0) {
@@ -521,6 +627,71 @@ class CourseScheduleManagerService extends Service {
       cancelledCourses.push(dateInfo);
     }
 
+    // 处理补课日期（被调入课程的日期）
+    for (const date of holidayMakeupDates) {
+      // 跳过已经在 cancelDates 中的日期，避免重复
+      if (cancelDates.includes(date)) continue;
+
+      // 使用 moment 计算当前日期是学期第几周
+      const weekDiff = Math.floor(
+        moment(date).diff(moment(semester.firstTeachingDate), 'days') / 7
+      );
+
+      // 获取当天实际的星期几
+      const { dayOfWeek } = await this._resolveClassDay({ date, events });
+
+      // 找到对应的调课事件
+      const makeupEvent = events.find(e =>
+        e.teachingCalcEffect === 'MAKEUP' && e.date === date
+      );
+
+      if (makeupEvent) {
+        const originalDate = makeupEvent.originalDate;
+        // 使用 moment 获取星期几
+        const originalDay = moment(originalDate).isoWeekday();
+        const originalDayName = [ '', '周一', '周二', '周三', '周四', '周五', '周六', '周日' ][originalDay];
+
+        // 查找原始日期对应的课程
+        const originalCoursesForDay = flatSchedules.filter(schedule => {
+          // 检查是否是原始日期的课程（星期几匹配）
+          if (schedule.dayOfWeek !== originalDay) return false;
+
+          // 计算原始日期是第几周
+          const originalWeekDiff = Math.floor(
+            moment(originalDate).diff(moment(semester.firstTeachingDate), 'days') / 7
+          );
+
+          // 检查原始日期当周是否有课
+          const weekNumberArray = schedule.weekNumberString.split(',').map(Number);
+          return originalWeekDiff >= 0 &&
+            originalWeekDiff < weekNumberArray.length &&
+            weekNumberArray[originalWeekDiff] === 1;
+        });
+
+        // 创建日期信息对象
+        const dateInfo = {
+          date,
+          weekOfDay: dayOfWeek,
+          weekNumber: weekDiff + 1,
+          // 使用负值课程列表，表示这是"增加"的课时
+          courses: originalCoursesForDay.map(course => ({
+            scheduleId: course.scheduleId,
+            courseName: course.courseName,
+            slotId: course.slotId,
+            periodStart: course.periodStart,
+            periodEnd: course.periodEnd,
+            weekType: course.weekType,
+            coefficient: course.coefficient,
+          })),
+          note: `该日上${originalDate} (${originalDayName}) 的课程，课时已计入`,
+          isMakeup: true, // 标记为补课日，特殊情况
+        };
+
+        // 添加到结果中
+        cancelledCourses.push(dateInfo);
+      }
+    }
+
     if (weeks) {
       cancelledCourses = this._filterByTeachingWeek(cancelledCourses, semester, weeks);
     }
@@ -531,7 +702,7 @@ class CourseScheduleManagerService extends Service {
    * 计算教职工在指定日期范围内的实际课时数
    * @param {Object} param - 参数对象
    * @param {number} param.staffId - 教职工ID（优先使用）
-   * @param {number} param.sstsTeacherId - 校园网教职工ID（当 staffId 为 0 时使用）
+   * @param {number} param.sstsTeacherId - 校园网taffId（当 staffId 为 0 时使用）
    * @param {Object} param.semester - 学期数据
    * @param {Array<number>} param.weeks - 要过滤的周数范围，如 [12,16] 表示12周到16周
    * @param {Object} param.events - 学期事件数据
@@ -556,13 +727,13 @@ class CourseScheduleManagerService extends Service {
   }
 
   /**
-     * 批量统计多个教职工在指定日期范围内的课时
+     * 批量统计多个taffId在指定日期范围内的课时
      * @param {Object} param - 参数对象
-     * @param {Array<number>} [param.staffIds] - 教职工ID列表，若为空则使用 sstsTeacherId 查询
-     * @param {Array<string>} [param.sstsTeacherIds] - 校园网教职工ID
+     * @param {Array<number>} [param.staffIds] - taffId列表，若为空则使用 sstsTeacherId 查询
+     * @param {Array<string>} [param.sstsTeacherIds] - 校园网taffId
      * @param {number} param.semesterId - 学期ID
      * @param {Array<number>} param.weeks - 要过滤的周数范围，如 [12,16] 表示12周到16周
-     * @return {Promise<Array>} - 每个教职工的课时统计（包含 staffId, sstsTeacherId, staffName）
+     * @return {Promise<Array>} - 每个taffId的课时统计（包含 staffId, sstsTeacherId, staffName）
      */
   async calculateMultipleTeachingHours({ staffIds = [], sstsTeacherIds = [], semesterId, weeks }) {
     const { ctx } = this;
@@ -587,22 +758,22 @@ class CourseScheduleManagerService extends Service {
         group: [ 'sstsTeacherId', 'staffId', 'staffName' ],
         raw: true,
       });
-    } else if (staffIds.length > 0) {
+    } else {
+      // 构建查询条件
+      const whereCondition = { semesterId };
+
+      // 如果有 staffIds，添加到查询条件
+      if (staffIds.length > 0) {
+        whereCondition.staffId = staffIds;
+      }
+
+      // 如果有 sstsTeacherIds，添加到查询条件
+      if (sstsTeacherIds.length > 0) {
+        whereCondition.sstsTeacherId = sstsTeacherIds;
+      }
+
       teachers = await ctx.model.Plan.CourseSchedule.findAll({
-        where: {
-          staffId: staffIds,
-          semesterId,
-        },
-        attributes: [ 'staffId', 'sstsTeacherId', 'staffName' ],
-        group: [ 'staffId', 'sstsTeacherId', 'staffName' ],
-        raw: true,
-      });
-    } else if (sstsTeacherIds.length > 0) {
-      teachers = await ctx.model.Plan.CourseSchedule.findAll({
-        where: {
-          sstsTeacherId: sstsTeacherIds,
-          semesterId,
-        },
+        where: whereCondition,
         attributes: [ 'staffId', 'sstsTeacherId', 'staffName' ],
         group: [ 'staffId', 'sstsTeacherId', 'staffName' ],
         raw: true,

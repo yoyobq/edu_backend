@@ -117,6 +117,64 @@ class courseSchedulePreparerService extends Service {
     return hours;
   }
 
+  /**
+   * 根据学期信息和周数范围获取具体的时间范围
+   * @private
+   * @param {Object} param - 参数对象
+   * @param {Object} param.semester - 学期对象，包含 firstTeachingDate 和 examStartDate
+   * @param {Array<number>} param.weeks - 周数范围，如 [1, 16] 表示第1周到第16周
+   * @return {Object} - 返回时间范围对象，包含 startDate 和 endDate
+   */
+  getTeachingWeekDateRange({ semester, weeks }) {
+    if (!semester || !semester.firstTeachingDate) {
+      throw new Error('缺少有效的学期信息');
+    }
+
+    if (!Array.isArray(weeks) || weeks.length !== 2 || weeks[0] > weeks[1]) {
+      throw new Error('无效的周数范围参数，必须提供包含起始周和结束周的数组且第一个数字不大于第二个');
+    }
+
+    const [ startWeek, endWeek ] = weeks;
+
+    // 计算学期的最大教学周数（不包括考试周）
+    const firstTeachingDate = new Date(semester.firstTeachingDate);
+    const examStartDate = new Date(semester.examStartDate);
+
+    // 计算考试周开始前的最后一天（即最后一个教学周的结束）
+    const lastTeachingDay = new Date(examStartDate);
+    lastTeachingDay.setDate(lastTeachingDay.getDate() - 1);
+
+    // 计算总教学周数（向下取整，因为可能不是整数周）
+    const totalTeachingWeeks = Math.floor(
+      (lastTeachingDay - firstTeachingDate) / (7 * 24 * 60 * 60 * 1000)
+    ) + 1;
+
+    // 确保请求的周数不超过总教学周数
+    const validEndWeek = Math.min(endWeek, totalTeachingWeeks);
+
+    // 计算起始日期：第一教学日 + (startWeek - 1) * 7天
+    const startDate = new Date(firstTeachingDate);
+    startDate.setDate(startDate.getDate() + (startWeek - 1) * 7);
+
+    // 计算结束日期：第一教学日 + (validEndWeek * 7 - 1)天
+    const endDate = new Date(firstTeachingDate);
+    endDate.setDate(endDate.getDate() + validEndWeek * 7 - 1);
+
+    // 确保结束日期不超过最后一个教学日
+    if (endDate > lastTeachingDay) {
+      endDate.setTime(lastTeachingDay.getTime());
+    }
+
+    // 格式化日期为 YYYY-MM-DD
+    const formatDate = date => date.toISOString().split('T')[0];
+
+    return {
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate),
+      totalTeachingWeeks,
+    };
+  }
+
   // 单纯跳板无必要
   // /**
   //  * 批量统计多个教职工课时

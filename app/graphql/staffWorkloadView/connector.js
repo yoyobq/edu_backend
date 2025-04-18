@@ -186,12 +186,34 @@ class StaffWorkLoadViewConnector {
     const semester = await ctx.model.Plan.Semester.findByPk(semesterId);
     if (!semester) ctx.throw(404, `未找到 ID 为 ${semesterId} 的学期`);
 
+    // 如果指定了周次范围，计算对应的日期范围并只获取该范围内的校历事件
+    const eventsWhereCondition = {
+      semesterId,
+      recordStatus: [ 'ACTIVE', 'ACTIVE_TENTATIVE' ],
+    };
+
+    if (weeks && weeks.length === 2) {
+      try {
+        // 使用 courseSchedulePreparer 中的方法计算日期范围
+        const dateRange = await ctx.service.plan.courseSchedulePreparer.getTeachingWeekDateRange({
+          semester,
+          weeks,
+        });
+
+        // 添加日期范围条件
+        eventsWhereCondition.date = {
+          [ctx.app.Sequelize.Op.between]: [ dateRange.startDate, dateRange.endDate ],
+        };
+      } catch (error) {
+        ctx.logger.error('扣除节假日时计算教学周日期范围失败:', error);
+        ctx.throw(400, '扣除节假日时计算教学周日期范围失败');
+        // 出错时不添加日期过滤，继续使用原始查询
+      }
+    }
+
     // 获取校历事件
     const events = await ctx.model.Plan.CalendarEvent.findAll({
-      where: {
-        semesterId,
-        recordStatus: [ 'ACTIVE', 'ACTIVE_TENTATIVE' ],
-      },
+      where: eventsWhereCondition,
     });
 
     // 构建查询条件
@@ -240,14 +262,22 @@ class StaffWorkLoadViewConnector {
         if (dateInfo.courses.length > 0) {
           dateInfo.courses.forEach(course => {
             const hours = (course.periodEnd - course.periodStart + 1) * course.coefficient;
-            course.cancelledHours = parseFloat(hours.toFixed(1));
-            totalCancelledHours += hours;
+
+            // 检查日期是否为补课日，如果是则返回负值
+            if (dateInfo.isMakeup === true) {
+              course.cancelledHours = parseFloat((-hours).toFixed(2));
+              totalCancelledHours -= hours;
+            } else {
+              course.cancelledHours = parseFloat(hours.toFixed(2));
+              totalCancelledHours += hours;
+            }
           });
         }
 
+        // 处理完成后删除 isMakeup 标记
+        // delete dateInfo.isMakeup;
         return dateInfo;
       });
-
 
       // 不再过滤结果，总是添加教师数据，并包含简化后的flatSchedules
       results.push({
@@ -255,7 +285,7 @@ class StaffWorkLoadViewConnector {
         sstsTeacherId,
         staffName,
         cancelledDates: formattedCancelledDates,
-        totalCancelledHours: parseFloat(totalCancelledHours.toFixed(1)),
+        totalCancelledHours: parseFloat(totalCancelledHours.toFixed(2)),
         flatSchedules,
       });
     }
