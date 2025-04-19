@@ -411,7 +411,7 @@ class CourseScheduleManagerService extends Service {
               }
             } else {
               // 如果前10位没有'-'
-              if (processedCourseName.charAt(7) === 'G') {
+              if (processedCourseName.charAt(7) === 'G' || processedCourseName.charAt(7) === 'B') {
                 // 如果第8位是'G'，删除前8位
                 processedCourseName = processedCourseName.substring(8);
               } else {

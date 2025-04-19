@@ -2,6 +2,8 @@
 type StaffWorkload {
   # 教职工的唯一标识符
   staffId: ID!
+  # 校园网教师工号
+  sstsTeacherId: String!
   # 教职工姓名
   staffName: String!
   # 教职工的教学工作量项目列表

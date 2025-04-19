@@ -77,8 +77,6 @@ class StaffWorkLoadViewConnector {
       scheduleWhereCondition.sstsTeacherId = sstsTeacherIds;
     }
 
-    console.log('查询条件:', scheduleWhereCondition);
-
     // 先查询 CourseSchedule，然后关联 CourseSlot
     const courseSchedules = await this.ctx.model.Plan.CourseSchedule.findAll({
       where: scheduleWhereCondition,
@@ -88,12 +86,13 @@ class StaffWorkLoadViewConnector {
       }],
     });
 
-    // 按 staffId 分组
-    const grouped = _.groupBy(courseSchedules, 'staffId');
+    // 按 sstsTeacherId 分组，而不是 staffId
+    const grouped = _.groupBy(courseSchedules, 'sstsTeacherId');
 
-    return Object.entries(grouped).map(([ staffId, schedules ]) => {
+    return Object.entries(grouped).map(([ sstsTeacherId, schedules ]) => {
       const staffName = schedules[0].staffName;
-      const sstsTeacherId = schedules[0].sstsTeacherId;
+      // 获取 staffId，如果存在的话
+      const staffId = schedules[0].staffId || 0;
 
       // 临时存储，用于按班级+课程名称合并数据
       const itemsMap = {};
@@ -106,10 +105,33 @@ class StaffWorkLoadViewConnector {
 
         // 如果这个键不存在，初始化它
         if (!itemsMap[key]) {
-          // 处理课程名称，剔除前8位
-          const processedCourseName = schedule.courseName.length > 8
-            ? schedule.courseName.substring(8)
-            : schedule.courseName;
+          // console.log(schedule.courseName);
+          // 处理课程名称
+          let processedCourseName = schedule.courseName;
+
+          if (processedCourseName && processedCourseName.length > 10) {
+            const dashIndex = processedCourseName.substring(0, 10).indexOf('-');
+
+            if (dashIndex > 0) {
+              // 如果前10位中有'-'
+              if (/[a-zA-Z]/.test(processedCourseName.charAt(dashIndex - 1))) {
+                // 如果'-'前是字母，删除前10位
+                processedCourseName = processedCourseName.substring(10);
+              } else {
+                // 否则删除前9位
+                processedCourseName = processedCourseName.substring(9);
+              }
+            } else {
+              // 如果前10位没有'-'
+              if (processedCourseName.charAt(7) === 'G' || processedCourseName.charAt(7) === 'B') {
+                // 如果第8位是'G'，删除前8位
+                processedCourseName = processedCourseName.substring(8);
+              } else {
+                // 否则删除前7位
+                processedCourseName = processedCourseName.substring(7);
+              }
+            }
+          }
 
           itemsMap[key] = {
             courseName: processedCourseName,
@@ -246,7 +268,7 @@ class StaffWorkLoadViewConnector {
 
     // 处理结果
     const results = [];
-    console.dir(allCancelledCourses, { depth: null });
+    // console.dir(allCancelledCourses, { depth: null });
 
     for (const teacherData of allCancelledCourses) {
       const { staffId, sstsTeacherId, staffName, cancelledCourses, flatSchedules } = teacherData;
