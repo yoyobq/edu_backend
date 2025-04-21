@@ -70,7 +70,8 @@ type CancelledDate {
   weekNumber: Int!
   # 该日期下被取消的课程列表
   courses: [CancelledCourse!]!
-  # 该日期下的特别说明
+  # 该日期下的特别说明，因修改扣课逻辑，应移除，
+  # 考虑到万一后期需要，故保留，
   note: String
 }
 

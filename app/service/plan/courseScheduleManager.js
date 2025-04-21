@@ -469,14 +469,15 @@ class CourseScheduleManagerService extends Service {
    */
   async calculateCancelledCourses({ staffId = 0, sstsTeacherId, semester, weeks, events }) {
     // 提取所有停课事件
-    const cancelDates = events.filter(e => e.teachingCalcEffect === 'CANCEL').map(e => e.date);
+    let cancelDates = events.filter(e => e.teachingCalcEffect === 'CANCEL').map(e => e.date);
 
     // 提取所有调课日期
     const makeupDays = events.filter(e => e.teachingCalcEffect === 'MAKEUP').map(e => e.originalDate);
 
-    // 提取所有补课日期（被调入课程的日期）
-    const holidayMakeupDates = events.filter(e => e.teachingCalcEffect === 'MAKEUP').map(e => e.date);
-
+    // 从 cancelDates 中移除同时存在于 makeupDays 中的日期
+    // 因为这些日期的课程已经被调到其他日期上了，不应该计入扣课
+    cancelDates = cancelDates.filter(date => !makeupDays.includes(date));
+    console.log('cancelDates', cancelDates);
     // 获取教师课程安排（已包含扁平化和简化的数据）
     const teacherSchedulesData = await this.getSimpleTeacherSchedules({
       staffId,
@@ -520,8 +521,8 @@ class CourseScheduleManagerService extends Service {
       const teacherCancelledCourses = await this._processCancelledDates({
         flatSchedules: filteredFlatSchedules,
         cancelDates,
-        makeupDays,
-        holidayMakeupDates, // 传入补课日期
+        // makeupDays,
+        // holidayMakeupDates, // 传入补课日期
         events,
         semester,
         weeks,
@@ -553,7 +554,7 @@ class CourseScheduleManagerService extends Service {
    * @param {Array} param.weeks - 周数范围
    * @return {Promise<Array>} - 处理后的取消课程信息
    */
-  async _processCancelledDates({ flatSchedules, cancelDates, makeupDays, holidayMakeupDates, events, semester, weeks }) {
+  async _processCancelledDates({ flatSchedules, cancelDates, events, semester, weeks }) {
     let cancelledCourses = [];
 
     // 处理常规取消日期
@@ -580,22 +581,6 @@ class CourseScheduleManagerService extends Service {
       );
       if (cancelEvent && cancelEvent.topic) {
         dateInfo.note = cancelEvent.topic;
-      }
-
-      // 检查是否是调课日，如果是，添加说明
-      if (makeupDays.includes(date)) {
-        const makeupEvent = events.find(e =>
-          e.teachingCalcEffect === 'MAKEUP' && e.originalDate === date
-        );
-        if (makeupEvent) {
-          // 添加调课的特别说明，如果已有备注则追加
-          const makeupNote = `该日课程已调至 ${makeupEvent.date}，不计入课时`;
-          if (dateInfo.note) {
-            dateInfo.note += `。${makeupNote}`;
-          } else {
-            dateInfo.note = makeupNote;
-          }
-        }
       }
 
       // 筛选出当天应该上的课程（考虑周数和星期几）
@@ -625,71 +610,6 @@ class CourseScheduleManagerService extends Service {
       }
       // 无论是否有课，都添加到结果中
       cancelledCourses.push(dateInfo);
-    }
-
-    // 处理补课日期（被调入课程的日期）
-    for (const date of holidayMakeupDates) {
-      // 跳过已经在 cancelDates 中的日期，避免重复
-      if (cancelDates.includes(date)) continue;
-
-      // 使用 moment 计算当前日期是学期第几周
-      const weekDiff = Math.floor(
-        moment(date).diff(moment(semester.firstTeachingDate), 'days') / 7
-      );
-
-      // 获取当天实际的星期几
-      const { dayOfWeek } = await this._resolveClassDay({ date, events });
-
-      // 找到对应的调课事件
-      const makeupEvent = events.find(e =>
-        e.teachingCalcEffect === 'MAKEUP' && e.date === date
-      );
-
-      if (makeupEvent) {
-        const originalDate = makeupEvent.originalDate;
-        // 使用 moment 获取星期几
-        const originalDay = moment(originalDate).isoWeekday();
-        const originalDayName = [ '', '周一', '周二', '周三', '周四', '周五', '周六', '周日' ][originalDay];
-
-        // 查找原始日期对应的课程
-        const originalCoursesForDay = flatSchedules.filter(schedule => {
-          // 检查是否是原始日期的课程（星期几匹配）
-          if (schedule.dayOfWeek !== originalDay) return false;
-
-          // 计算原始日期是第几周
-          const originalWeekDiff = Math.floor(
-            moment(originalDate).diff(moment(semester.firstTeachingDate), 'days') / 7
-          );
-
-          // 检查原始日期当周是否有课
-          const weekNumberArray = schedule.weekNumberString.split(',').map(Number);
-          return originalWeekDiff >= 0 &&
-            originalWeekDiff < weekNumberArray.length &&
-            weekNumberArray[originalWeekDiff] === 1;
-        });
-
-        // 创建日期信息对象
-        const dateInfo = {
-          date,
-          weekOfDay: dayOfWeek,
-          weekNumber: weekDiff + 1,
-          // 使用负值课程列表，表示这是"增加"的课时
-          courses: originalCoursesForDay.map(course => ({
-            scheduleId: course.scheduleId,
-            courseName: course.courseName,
-            slotId: course.slotId,
-            periodStart: course.periodStart,
-            periodEnd: course.periodEnd,
-            weekType: course.weekType,
-            coefficient: course.coefficient,
-          })),
-          note: `该日上${originalDate} (${originalDayName}) 的课程，课时已计入`,
-          isMakeup: true, // 标记为补课日，特殊情况
-        };
-
-        // 添加到结果中
-        cancelledCourses.push(dateInfo);
-      }
     }
 
     if (weeks) {
