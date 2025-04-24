@@ -32,7 +32,7 @@ class SstsSpiderConnector {
   }
 
   async submitTeachingLog(input) {
-    const logData = await this.ctx.service.mySSTS.myCurriPlan.submitTeachingLog(input);
+    const logData = await this.ctx.service.mySSTS.teachingLog.submit.submitTeachingLog(input);
     return logData;
   }
 }
