@@ -20,7 +20,7 @@ class MyCurriPlanService extends Service {
     const planListRaw = await this.ctx.service.mySSTS.curriPlan.list.getCurriPlanList({ JSESSIONID_A, userId, token });
 
     // 第二步：获取已填写教学日志的概览数据
-    const logOverview = await this.ctx.service.mySSTS.teachingLog.overview.getTeachingLogOverview({ JSESSIONID_A, userId, token });
+    const logList = await this.ctx.service.mySSTS.teachingLog.list.getTeachingLogList({ JSESSIONID_A, userId, token });
 
     // 第三步：清洗教学计划数据、提取 planId 与 teachingClassId 标识符
     const cleaner = this.ctx.service.mySSTS.curriPlan.cleaner;
@@ -28,21 +28,56 @@ class MyCurriPlanService extends Service {
     const curriPlanIds = cleaner.extractPlanIdentifiers(planListRaw);
     // console.log('PlanList:', planList);
     console.log('CurriPlanIds:', curriPlanIds);
-    const logIds = cleaner.extractLogIdentifiers(logOverview);
+    const logIds = cleaner.extractLogIdentifiers(logList);
 
     const allCurriDetails = [];
 
     for (let i = 0; i < curriPlanIds.length; i++) {
-      const { planId, teachingClassId, className, courseName } = curriPlanIds[i];
-
-      let detail = await this.ctx.service.mySSTS.curriPlan.detail.getCurriPlanDetail({ JSESSIONID_A, planId, token });
-      console.log('Detail:', detail);
+      const { planId, teachingClassId, className, courseName, courseCategory } = curriPlanIds[i];
+      let detail = [];
+      if (courseCategory === '3') {
+        const integratedDetail = await this.ctx.service.mySSTS.curriPlan.integratedDetail.getIntegratedPlanDetail({ JSESSIONID_A, planId, token });
+        // console.dir(integratedDetail, { depth: null });
+        console.log(integratedDetail);
+      } else {
+        detail = await this.ctx.service.mySSTS.curriPlan.detail.getCurriPlanDetail({ JSESSIONID_A, planId, token });
+        // [{
+        //   SECTION_NAME: '第二节,第一节',
+        //   UPDATE_USER_ID: '3236',
+        //   LECTURE_PLAN_ID: '40349a569512fa36019516ffdfd13ab3',
+        //   PRACTICE_HOURS: null,
+        //   ROW_NUM: 1,
+        //   TEACHING_CHAPTER_CONTENT: '安全教育',
+        //   TOPIC_NUMBER: null,
+        //   HOMEWORK: '无',
+        //   TOPIC_NAME: null,
+        //   UPDATE_TIME: '2025-02-28 12:54:02',
+        //   LECTURE_PLAN_DETAIL_ID: '40349a56954ac28101954ae7879a17de',
+        //   PRACTICE_TEACHING_DATE: null,
+        //   TEACHING_METHOD: '2',
+        //   RNUM: 857,
+        //   LESSON_HOURS: 2,
+        //   LECTURE_HOURS: null,
+        //   DAY_OF_WEEK: 4,
+        //   UPDATE_USER_NAME: '徐洋',
+        //   SELECTEDKEY: '40349a56954ac28101954ae7879a17de',
+        //   WEEK_NUMBER: 1,
+        //   SECTION_ID: '2,1',
+        //   THEORY_TEACHING_DATE: '2025-02-20',
+        //   TEACHING_LOCATION: '5402',
+        //   DEMONSTRATION_HOURS: null
+        // }]
+        console.log('Detail:', detail[0]);
+      }
       detail = cleaner.filterPastDateCurriculums({ tomorrow, planDetail: detail });
+      // console.log('Filtered Detail:', detail[0]);
       detail = cleaner.sortSectionIds(detail);
+      // console.log('Sorted Detail:', detail[0]);
 
       let cleanedData = [];
       if (logIds[i]?.logId) {
-        let completedLogs = await this.ctx.service.mySSTS.teachingLog.list.getTeachingLogList({ JSESSIONID_A, teachingClassId, token });
+        let completedLogs = await this.ctx.service.mySSTS.teachingLog.detail.getTeachingLogDetail({ JSESSIONID_A, teachingClassId, token });
+        console.log('Completed Logs:', completedLogs[0]);
         completedLogs = cleaner.sortSectionIds(completedLogs);
         cleanedData = cleaner.removeDuplicates(detail, completedLogs);
       } else {
