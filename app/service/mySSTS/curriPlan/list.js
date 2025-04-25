@@ -5,7 +5,7 @@ const Service = require('egg').Service;
 
 /**
  * 教学计划列表服务
- * 负责访问校园网，获取教师对应的课程计划。
+ * 负责访问校园网，获取教师对应的课程计划列表。
  */
 class CurriPlanListService extends Service {
   async getCurriPlanList({ JSESSIONID_A, userId = '', token, deptId = '' }) {

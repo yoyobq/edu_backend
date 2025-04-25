@@ -27,18 +27,25 @@ class MyCurriPlanService extends Service {
     const planList = cleaner.cleanPlanList(planListRaw);
     const curriPlanIds = cleaner.extractPlanIdentifiers(planListRaw);
     // console.log('PlanList:', planList);
-    console.log('CurriPlanIds:', curriPlanIds);
-    const logIds = cleaner.extractLogIdentifiers(logList);
+    // console.log('CurriPlanIds:', curriPlanIds);
 
     const allCurriDetails = [];
 
     for (let i = 0; i < curriPlanIds.length; i++) {
       const { planId, teachingClassId, className, courseName, courseCategory } = curriPlanIds[i];
+      /* 以下是处理教学计划 */
       let detail = [];
+      let integratedDetail = [];
       if (courseCategory === '3') {
-        const integratedDetail = await this.ctx.service.mySSTS.curriPlan.integratedDetail.getIntegratedPlanDetail({ JSESSIONID_A, planId, token });
+        const scheduleId = await this.ctx.model.Ssts.CourseScheduleSourceMap.findOne({
+          where: { LECTURE_PLAN_ID: planId },
+          attributes: [ 'courseScheduleId' ],
+        }).then(result => (result ? result.courseScheduleId : null));
+
+        integratedDetail = await this.ctx.service.mySSTS.curriPlan.integratedDetail.getIntegratedPlanDetail({ JSESSIONID_A, planId, token, userId, scheduleId });
         // console.dir(integratedDetail, { depth: null });
-        console.log(integratedDetail);
+        console.log('一体化课程的教学计划', integratedDetail[0]);
+        // console.log('存在一体化课程');
       } else {
         detail = await this.ctx.service.mySSTS.curriPlan.detail.getCurriPlanDetail({ JSESSIONID_A, planId, token });
         // [{
@@ -67,20 +74,30 @@ class MyCurriPlanService extends Service {
         //   TEACHING_LOCATION: '5402',
         //   DEMONSTRATION_HOURS: null
         // }]
-        console.log('Detail:', detail[0]);
+        // console.log('Detail:', detail[0]);
+        detail = cleaner.filterPastDateCurriculums({ tomorrow, planDetail: detail });
+        detail = cleaner.sortSectionIds(detail);
+        // console.log('非一体化课程的教学计划', detail[0]);
       }
-      detail = cleaner.filterPastDateCurriculums({ tomorrow, planDetail: detail });
-      // console.log('Filtered Detail:', detail[0]);
-      detail = cleaner.sortSectionIds(detail);
-      // console.log('Sorted Detail:', detail[0]);
 
+      /* 以下是处理已填写的课程日志 */
+      // 提取日志摘要中的教学班 ID 与日志 ID 和课程性质
+      const logIds = cleaner.extractLogIdentifiers(logList);
       let cleanedData = [];
+
       if (logIds[i]?.logId) {
+        // 获取对应 logIds 已填写的教学日志详情
         let completedLogs = await this.ctx.service.mySSTS.teachingLog.detail.getTeachingLogDetail({ JSESSIONID_A, teachingClassId, token });
-        console.log('Completed Logs:', completedLogs[0]);
-        completedLogs = cleaner.sortSectionIds(completedLogs);
-        cleanedData = cleaner.removeDuplicates(detail, completedLogs);
+        if (logIds[i].courseCategory === '3') {
+          console.log('存在一体化课程日志', completedLogs[0]);
+        } else {
+          // 对 SECTION_ID （课程节次，如2，1）按升序排序
+          completedLogs = cleaner.sortSectionIds(completedLogs);
+          // 剔除已完成日志的教学明细
+          cleanedData = cleaner.removeDuplicates(detail, completedLogs);
+        }
       } else {
+        // 当教师没有填写过任何教学日志时，系统直接使用完整的教学计划详情，不需要进行任何过滤或剔除操作。
         cleanedData = detail;
       }
 

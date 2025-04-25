@@ -4,7 +4,7 @@
 const Service = require('egg').Service;
 
 /**
- * 获取教学日志概览信息（课程级别，不含具体节次）
+ * 获取教学日志列表信息（课程级别，不含具体节次）
  */
 class TeachingLogListService extends Service {
   async getTeachingLogList({ JSESSIONID_A, userId, token }) {
