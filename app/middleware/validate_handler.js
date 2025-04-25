@@ -90,11 +90,8 @@ module.exports = (_, app) => {
         const result = ctx.helper.verifyToken(ctx.header.authorization, secret);
 
         if (!result.success) {
-          ctx.body = {
-            success: false,
-            errorCode: 400,
-            errorMessage: result.errorMessage,
-          };
+          // 向前台报告 token 验证失败的信息
+          ctx.body = result;
           return;
         }
 
