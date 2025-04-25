@@ -33,17 +33,36 @@ class courseSchedulePreparerService extends Service {
   /**
    * 查询实际教学日期及日期中对应的课程
    * @param {Object} param - 参数对象
-   * @param {number} param.semesterId - 学期 ID
+   * @param {number} [param.semesterId] - 学期 ID
    * @param {number} [param.staffId] - 教师 ID（可选）
    * @param {string} [param.sstsTeacherId] - SSTS 教师 ID（可选）
+   * @param {number} [param.scheduleId] - 课程ID
    * @param {number[]} [param.weeks] - 周次数组（可选）
    * @return {Promise<Array>} - 返回实际有效的上课日期及课时详情
    */
-  async actualTeachingDates({ semesterId, staffId, sstsTeacherId, weeks }) {
-    const semester = await this.ctx.model.Plan.Semester.findByPk(semesterId);
+  async actualTeachingDates({ semesterId, staffId, sstsTeacherId, weeks, scheduleId }) {
+    let semester;
+
+    // 如果未提供 semesterId，则查询当前学期
+    if (!semesterId) {
+      semester = await this.ctx.model.Plan.Semester.findOne({
+        where: { isCurrent: true },
+      });
+
+      if (!semester) {
+        this.ctx.throw(404, '未找到当前学期信息，请明确指定 semesterId');
+      }
+    } else {
+      semester = await this.ctx.model.Plan.Semester.findByPk(semesterId);
+    }
+
+    if (!semester) {
+      this.ctx.throw(404, `未找到ID为 ${semesterId} 的学期信息`);
+    }
+
     const events = await this.ctx.model.Plan.CalendarEvent.findAll({
       where: {
-        semesterId,
+        semesterId: semester.id,
         recordStatus: [ 'ACTIVE', 'ACTIVE_TENTATIVE' ],
       },
     });
@@ -54,6 +73,7 @@ class courseSchedulePreparerService extends Service {
       semester,
       events,
       weeks,
+      scheduleId,
     });
 
     return dates;

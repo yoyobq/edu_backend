@@ -239,11 +239,12 @@ class CourseScheduleManagerService extends Service {
    * @param {number} param.staffId - 教职工ID
    * @param {number} param.sstsTeacherId - 校园网taffId
    * @param {Object} param.semester - 学期对象，包含 firstTeachingDate、endDate、id 等
+   * @param {number} [param.scheduleId] - 课程ID
    * @param {Array<Object>} param.events - 必传，校历事件列表
    * @param {Array<number>} param.weeks - 要过滤的周数范围，如 [12,16] 表示12周到16周
    * @return {Promise<Array>} - 实际有效的上课日期及课时详情
    */
-  async listActualTeachingDates({ staffId = 0, sstsTeacherId, semester, weeks, events }) {
+  async listActualTeachingDates({ staffId = 0, sstsTeacherId, semester, weeks, events, scheduleId }) {
     const { ctx } = this;
 
     if (!semester || !semester.firstTeachingDate || !semester.endDate || !semester.id) {
@@ -254,9 +255,27 @@ class CourseScheduleManagerService extends Service {
       ctx.throw(400, '必须传入事件列表（events）');
     }
 
+    // 构建查询条件
+    const whereCondition = { semesterId: semester.id };
+
+    // 如果提供了 staffId，添加到查询条件
+    if (staffId !== 0) {
+      whereCondition.staffId = staffId;
+    }
+
+    // 如果提供了 sstsTeacherId，添加到查询条件
+    if (sstsTeacherId) {
+      whereCondition.sstsTeacherId = sstsTeacherId;
+    }
+
+    // 如果提供了 scheduleId，添加到查询条件
+    if (scheduleId) {
+      whereCondition.id = scheduleId;
+    }
+
     // 获取该教师在该学期的所有课程安排及其时段
     const schedules = await ctx.model.Plan.CourseSchedule.findAll({
-      where: staffId !== 0 ? { staffId, semesterId: semester.id } : { sstsTeacherId, semesterId: semester.id },
+      where: whereCondition,
       include: [{ model: ctx.model.Plan.CourseSlot, as: 'slots' }],
     });
 
