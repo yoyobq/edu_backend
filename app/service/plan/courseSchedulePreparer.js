@@ -37,23 +37,25 @@ class courseSchedulePreparerService extends Service {
    * @param {number} [param.staffId] - 教师 ID（可选）
    * @param {string} [param.sstsTeacherId] - SSTS 教师 ID（可选）
    * @param {number} [param.scheduleId] - 课程ID
+   * @param {boolean} [param.considerMakeup] - 是否计算调课（默认为 true）
    * @param {number[]} [param.weeks] - 周次数组（可选）
    * @return {Promise<Array>} - 返回实际有效的上课日期及课时详情
    */
-  async actualTeachingDates({ semesterId, staffId, sstsTeacherId, weeks, scheduleId }) {
+  async actualTeachingDates({ semesterId, staffId, sstsTeacherId, weeks, scheduleId, considerMakeup = true }) {
     let semester;
 
     // 如果未提供 semesterId，则查询当前学期
     if (!semesterId) {
       semester = await this.ctx.model.Plan.Semester.findOne({
         where: { isCurrent: true },
+        raw: true, // 添加这一行
       });
 
       if (!semester) {
         this.ctx.throw(404, '未找到当前学期信息，请明确指定 semesterId');
       }
     } else {
-      semester = await this.ctx.model.Plan.Semester.findByPk(semesterId);
+      semester = await this.ctx.model.Plan.Semester.findByPk(semesterId, { raw: true }); // 添加 raw: true
     }
 
     if (!semester) {
@@ -65,6 +67,7 @@ class courseSchedulePreparerService extends Service {
         semesterId: semester.id,
         recordStatus: [ 'ACTIVE', 'ACTIVE_TENTATIVE' ],
       },
+      raw: true, // 添加这一行
     });
 
     const dates = await this.ctx.service.plan.courseScheduleManager.listActualTeachingDates({
@@ -74,6 +77,7 @@ class courseSchedulePreparerService extends Service {
       events,
       weeks,
       scheduleId,
+      considerMakeup,
     });
 
     return dates;
@@ -98,6 +102,7 @@ class courseSchedulePreparerService extends Service {
         semesterId,
         recordStatus: [ 'ACTIVE', 'ACTIVE_TENTATIVE' ],
       },
+      raw: true,
     });
     const dates = await this.ctx.service.plan.courseScheduleManager.calculateCancelledCourses({
       semester,
@@ -119,12 +124,13 @@ class courseSchedulePreparerService extends Service {
    * @return {Promise<number>} - 返回有效课时总数
    */
   async teachingHours({ semesterId, staffId, sstsTeacherId, weeks }) {
-    const semester = await this.ctx.model.Plan.Semester.findByPk(semesterId);
+    const semester = await this.ctx.model.Plan.Semester.findByPk(semesterId, { raw: true }); // 添加 raw: true
     const events = await this.ctx.model.Plan.CalendarEvent.findAll({
       where: {
         semesterId,
         recordStatus: [ 'ACTIVE', 'ACTIVE_TENTATIVE' ],
       },
+      raw: true, // 添加这一行
     });
     const hours = await this.ctx.service.plan.courseScheduleManager.calculateTeachingHours({
       semester,

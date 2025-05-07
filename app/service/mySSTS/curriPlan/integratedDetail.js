@@ -7,29 +7,37 @@ const Service = require('egg').Service;
 class IntegratedPlanService extends Service {
   // 顶层函数
   async getIntegratedPlanDetail({ JSESSIONID_A, planId, token, userId, scheduleId }) {
-    // 第一步 调用原始方法获取数据
+    // 第一步.1 获取一体化课程教学计划的原始数据
     const originalData = await this.getIntegratedPlanDetailOrigin({ JSESSIONID_A, planId, token });
+    // 第一步.2 获取一体化课程考试的原始数据（未使用）
+    // console.dir(originalData.checkDTOList, { depth: null });
 
     // 第二步 对数据进行扁平化处理
     const flattenedData = this._flattenIntegratedPlanData(originalData.dataList);
 
     // 第三步 排序并检查数据
-    const sortedData = this._sortAndCheckPlanData(flattenedData);
+    const sortedPlanData = this._sortAndCheckPlanData(flattenedData);
     // console.log('排序后的数据:', sortedData);
 
     // 第四步 获取上课的日期和节数
-    const dateList = await this.ctx.service.plan.courseSchedulePreparer.actualTeachingDates({ userId, scheduleId });
+    const dateList = await this.ctx.service.plan.courseSchedulePreparer.actualTeachingDates({
+      userId,
+      scheduleId,
+      // 照道理说是不应该提供这个选项的，当然要计算所有的日程更动
+      // 但校园网一体化课程计划里，居然没有考虑这个问题，所以这里也不考虑，防止不一致
+      considerMakeup: false,
+    });
 
     // 第五步 扁平化上课的日期和节数数据
     const flattenedDateList = this._flattenDateList(dateList);
-    console.log('扁平化后的数据:', flattenedDateList);
+    // console.log('扁平化后的数据:', flattenedDateList[0]);
 
     // 第六步 合并课程计划和上课日期数据
-    const mergedData = this._mergePlanAndDateData(sortedData, flattenedDateList);
-    console.dir(mergedData, { depth: null });
+    const mergedData = this._mergePlanAndDateData(sortedPlanData, flattenedDateList);
+    // console.dir(mergedData, { depth: null });
 
     // 返回扁平化后的数据
-    return sortedData;
+    return mergedData;
   }
 
 
@@ -81,6 +89,7 @@ class IntegratedPlanService extends Service {
         result.push({
           ...planItem,
           teachingDate: usedDates[usedDates.length - 1].date, // 使用最后一个日期作为完成日期
+          section_id: this._generateSectionId(usedDates), // 调用新函数生成 section_id,这是一个方便排序的项，提交时应该清空内容s
           usedDates,
         });
       } else {
@@ -88,6 +97,7 @@ class IntegratedPlanService extends Service {
         result.push({
           ...planItem,
           teachingDate: null,
+          section_id: '',
           usedDates: [],
         });
       }
@@ -223,6 +233,59 @@ class IntegratedPlanService extends Service {
     }
 
     return flattenedData;
+  }
+
+  /**
+   * 根据使用的日期生成节次ID
+   * @param {Array} usedDates - 使用的日期数组
+   * @return {string} - 生成的节次ID字符串
+   */
+  _generateSectionId(usedDates) {
+    if (!usedDates || usedDates.length === 0) {
+      return '';
+    }
+
+    const sectionIdArray = [];
+
+    // 检查是否所有日期都在同一天且节次连续
+    const allSameDay = usedDates.every(date => date.date === usedDates[0].date);
+    let isConsecutive = true;
+
+    if (allSameDay && usedDates.length > 1) {
+      // 按 periodStart 排序
+      usedDates.sort((a, b) => a.periodStart - b.periodStart);
+
+      // 检查是否连续
+      for (let i = 1; i < usedDates.length; i++) {
+        const prevEnd = usedDates[i - 1].periodStart + usedDates[i - 1].lessons_hours - 1;
+        if (usedDates[i].periodStart !== prevEnd + 1) {
+          isConsecutive = false;
+          break;
+        }
+      }
+    } else if (usedDates.length > 1) {
+      // 多个不同日期，不连续
+      isConsecutive = false;
+    }
+
+    // 根据连续性生成 section_id
+    if (allSameDay && isConsecutive) {
+      // 所有日期同一天且连续，生成完整的节次数组
+      const firstStart = usedDates[0].periodStart;
+      const totalHours = usedDates.reduce((sum, date) => sum + date.lessons_hours, 0);
+      for (let i = 0; i < totalHours; i++) {
+        sectionIdArray.push(firstStart + i);
+      }
+    } else {
+      // 不连续或不同天，只使用第一项
+      const firstStart = usedDates[0].periodStart;
+      const firstHours = usedDates[0].lessons_hours;
+      for (let i = 0; i < firstHours; i++) {
+        sectionIdArray.push(firstStart + i);
+      }
+    }
+
+    return sectionIdArray.join(',');
   }
 
   // 获取校园网的原始数据
@@ -367,4 +430,3 @@ module.exports = IntegratedPlanService;
 //   "production_back_num": 0,              // 返工数
 //   "production_waste_num": 0              // 报废数
 // }
-

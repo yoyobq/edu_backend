@@ -30,6 +30,7 @@ class CourseScheduleManagerService extends Service {
           date,
           recordStatus: [ 'ACTIVE', 'ACTIVE_TENTATIVE' ],
         },
+        raw: true,
       });
     }
 
@@ -52,10 +53,17 @@ class CourseScheduleManagerService extends Service {
 
     // 处理停课日
     if (cancelEvent) {
+      // 如果停课原因是 SWAP（调课），或者 MAKEUP（节假日补课）
+      // 也就意味着另一天会上课，所以需要获取另一天是周几上课
+
       const swapTarget = events.find(e =>
-        (e.teachingCalcEffect === 'SWAP' || e.teachingCalcEffect === 'MAKEUP') &&
-        e.originalDate === date
+        (e.teachingCalcEffect === 'SWAP' || e.teachingCalcEffect === 'MAKEUP')
+        && e.originalDate === date
       );
+
+      // 一体化课程中，目前是不按照校历来扣课的，所以目前前端不会返回需要处理停课日补课的情况
+      // 此处得到的 swapTarget 数据应该都是 undefined（无调课，直接放假）
+      // console.log(`停课日: ${date}, 调课上课日：${swapTarget}, 星期几: ${dateObj.isoWeekday()}`);
 
       return {
         isClassDay: false,
@@ -200,6 +208,7 @@ class CourseScheduleManagerService extends Service {
     const { ctx } = this;
 
     const { isClassDay, dayOfWeek } = await this._resolveClassDay({ date });
+
     if (!isClassDay) return [];
 
     /**
@@ -240,11 +249,12 @@ class CourseScheduleManagerService extends Service {
    * @param {number} param.sstsTeacherId - 校园网taffId
    * @param {Object} param.semester - 学期对象，包含 firstTeachingDate、endDate、id 等
    * @param {number} [param.scheduleId] - 课程ID
+   * @param {boolean} [param.considerMakeup] - 是否计算调课（默认为 true）
    * @param {Array<Object>} param.events - 必传，校历事件列表
    * @param {Array<number>} param.weeks - 要过滤的周数范围，如 [12,16] 表示12周到16周
    * @return {Promise<Array>} - 实际有效的上课日期及课时详情
    */
-  async listActualTeachingDates({ staffId = 0, sstsTeacherId, semester, weeks, events, scheduleId }) {
+  async listActualTeachingDates({ staffId = 0, sstsTeacherId, semester, weeks, events, scheduleId, considerMakeup = true }) {
     const { ctx } = this;
 
     if (!semester || !semester.firstTeachingDate || !semester.endDate || !semester.id) {
@@ -298,9 +308,8 @@ class CourseScheduleManagerService extends Service {
 
       // 计算当前日期是学期第几周
       // 使用 moment 计算周数
-      const weekDiff = Math.floor(
-        moment(currentDate).diff(moment(semester.firstTeachingDate), 'days') / 7
-      );
+      const dayDiff = moment(currentDate).diff(moment(semester.firstTeachingDate), 'days');
+      const weekDiff = Math.floor(dayDiff / 7) + 1;
 
       // 收集当天所有课程时段
       const slotsForTheDay = [];
@@ -333,7 +342,7 @@ class CourseScheduleManagerService extends Service {
         actualTeachingDates.push({
           date: dateString, // 日期
           weekOfDay: dayOfWeek, // 星期几 (1-7)
-          weekNumber: weekDiff + 1, // 第几教学周
+          weekNumber: weekDiff, // 第几教学周
           courses: slotsForTheDay, // 当天的课程时段列表
         });
       }
@@ -345,7 +354,49 @@ class CourseScheduleManagerService extends Service {
     if (weeks) {
       actualTeachingDates = this._filterByTeachingWeek(actualTeachingDates, semester, weeks);
     }
+
+    // 处理 considerMakeup 为 false 的情况
+    // 这是为了处理校园网未按校历计算上课日期的特殊情况，如果将来校园网修正了，直接删除即可
+    if (!considerMakeup) {
+      actualTeachingDates = this._revertHolidayMakeup(actualTeachingDates, events);
+    }
+
     return actualTeachingDates;
+  }
+
+  /**
+   * 将补课日期替换为原始日期（用于不考虑补课安排的情况）
+   * @private
+   * @param {Array} teachingDates - 教学日期数组
+   * @param {Array} events - 校历事件数组
+   * @return {Array} - 处理后的教学日期数组
+   */
+  _revertHolidayMakeup(teachingDates, events) {
+    // 找出所有 eventType 为 HOLIDAY_MAKEUP 的事件
+    const holidayMakeupEvents = events.filter(e => e.eventType === 'HOLIDAY_MAKEUP');
+
+    if (holidayMakeupEvents.length === 0) {
+      return teachingDates;
+    }
+
+    // 创建一个映射表，用于存储补课日期到原始日期的映射
+    const dateMap = {};
+    holidayMakeupEvents.forEach(event => {
+      if (event.date && event.originalDate) {
+        dateMap[event.date] = event.originalDate;
+      }
+    });
+
+    // 替换日期
+    const result = teachingDates.map(item => {
+      if (dateMap[item.date]) {
+        return { ...item, date: dateMap[item.date] };
+      }
+      return item;
+    });
+
+    // 按日期排序
+    return result.sort((a, b) => new Date(a.date) - new Date(b.date));
   }
 
   /**
@@ -557,6 +608,7 @@ class CourseScheduleManagerService extends Service {
       });
     }
 
+    // console.dir(results, { depth: null });
     return results;
   }
 

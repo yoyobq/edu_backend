@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // app/service/mySSTS/teachingLog/submit.js
 'use strict';
 
@@ -12,6 +13,7 @@ const Service = require('egg').Service;
  *   token: string            // 教务系统授权 token
  * }
  *
+ * WARNING: 看似和一体化一样，不要合并！不要合并！不要合并
  * 本函数将模板字段与用户输入合并后，发起加密请求。
  * 成功时返回数据，失败时抛出错误供上层捕获处理。
  */
@@ -112,6 +114,107 @@ class TeachingLogSubmitService extends Service {
 
     return decoded.data;
   }
+  // 一体化日志提交
+  async submitIntegratedTeachingLog({ teachingLogData, JSESSIONID_A, token }) {
+    // 引入清洗工具
+    const cleaner = this.ctx.service.mySSTS.curriPlan.cleaner;
+
+    // 教务系统需要提交完整字段，因此预填所有字段模板
+    const templateData = {
+      absenceList: [],
+      teaching_class_id: '',
+      teaching_date: '',
+      week_number: '',
+      day_of_week: '',
+      listening_teacher_id: '',
+      guidance_teacher_id: '',
+      listening_teacher_name: '',
+      lesson_hours: null,
+      minSectionId: '',
+      course_content: '',
+      homework_assignment: '',
+      topic_record: '',
+      section_id: '',
+      section_name: '',
+      journal_type: '',
+      student_number: '',
+      shift: '',
+      problem_and_solve: '',
+      complete_and_summary: '',
+      discipline_situation: '',
+      security_and_maintain: '',
+      lecture_plan_detail_id: '',
+      lecture_journal_detail_id: '',
+      production_project_title: '',
+      lecture_lessons: 0,
+      training_lessons: 0,
+      example_lessons: 0,
+      production_name: '',
+      production_plan_num: 0,
+      production_qualified_num: 0,
+      production_back_num: 0,
+      production_waste_num: 0,
+    };
+
+    // 合并用户输入数据与模板字段
+    const completeTeachingLogData = {};
+    for (const key in templateData) {
+      completeTeachingLogData[key] = teachingLogData.hasOwnProperty(key) ? teachingLogData[key] : templateData[key];
+    }
+
+    // 动态构造 URL（含随机 winTemp 参数，避免请求重复缓存）
+    const winTemp = `${Math.floor(Math.random() * 100000)}.${(Math.random()).toFixed(13).slice(2)}`;
+    const url = `http://2.46.215.2:18000/jgyx-ui/jgyx/educationaffairsmgmt/teachingdailymgmt/lectureJournalDetail.action?frameControlSubmitFunction=saveLectureJournalDetail&winTemp=${winTemp}`;
+
+    // 构造请求头
+    const headers = {
+      Accept: 'application/json, text/plain, */*',
+      'Accept-Encoding': 'gzip, deflate',
+      'Accept-Language': 'en,zh-CN;q=0.9',
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json;charset=UTF-8',
+      Cookie: `SzmeSite=None; JSESSIONID_A=${JSESSIONID_A}`,
+      Dnt: '1',
+      Host: '2.46.215.2:18000',
+      Origin: 'http://2.46.215.2:18000',
+      Referer: 'http://2.46.215.2:18000/jgyx-ui/CMU09/CMU090201/index',
+      'Service-Type': 'Microservices',
+      'User-Agent': this.ctx.request.headers['user-agent'],
+    };
+
+    console.log(completeTeachingLogData);
+    // 加密日志数据
+    // const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(completeTeachingLogData);
+
+    // let response;
+    // try {
+    //   // 发送 POST 请求提交日志
+    //   response = await this.ctx.curl(url, {
+    //     method: 'POST',
+    //     headers,
+    //     data: payload,
+    //     dataType: 'string',
+    //     timeout: 30000,
+    //   });
+    // } catch (error) {
+    //   // 网络异常或服务端连接失败
+    //   throw error;
+    // }
+
+    // // 解密返回内容
+    // const decoded = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
+
+    // // 统一错误处理逻辑
+    // if (!decoded.success) {
+    //   const errorHandler = this.ctx.service.mySSTS.errorHandler;
+    //   const errorResponse = decoded.msg
+    //     ? decoded
+    //     : { code: 400, msg: '一体教学日志提交时出错，成因复杂，请联系管理员排错。', success: false };
+    //   await errorHandler.handleScrapingError(errorResponse);
+    // }
+
+    // return decoded.data;
+  }
 }
 
 module.exports = TeachingLogSubmitService;
@@ -167,4 +270,40 @@ module.exports = TeachingLogSubmitService;
 //       workItemId: null
 //     }
 //   }
+// }
+
+// {
+//   "absenceList":[],
+//   "teaching_class_id":"40349a5694255a8f019425bb965a24a9",// model.soucremap
+//   "teaching_date":"2025-04-21",
+//   "week_number":"10",
+//   "day_of_week":"1",
+//   "listening_teacher_id":"3236",
+//   "guidance_teacher_id":"",
+//   "listening_teacher_name":"3236徐洋",
+//   "lesson_hours":4,
+//   "minSectionId":"",
+//   "course_content":"",
+//   "homework_assignment":"",
+//   "topic_record":"",
+//   "section_id":"",
+//   "section_name":"",
+//   "journal_type":"3",
+//   "student_number":"",
+//   "shift":"1",  //！常日班3
+//   "problem_and_solve":"认识BIOS和CMOS、学会配置CMOS信息", // learn_target + 自定义
+//   "complete_and_summary":"学生能够认识BIOS和CMOS、学会配置CMOS信息",  //lear_target + 自定义
+//   "discipline_situation":"",
+//   "security_and_maintain":"",
+//   "lecture_plan_detail_id":"40349a56951709900195181f430e1829", // session_detail_id
+//   "lecture_journal_detail_id":"",
+//   "production_project_title":"",
+//   "lecture_lessons":0,
+//   "training_lessons":0,
+//   "example_lessons":0,
+//   "production_name":"",
+//   "production_plan_num":0,
+//   "production_qualified_num":0,
+//   "production_back_num":0,
+//   "production_waste_num":0
 // }

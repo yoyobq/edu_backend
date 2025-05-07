@@ -35,17 +35,16 @@ class MyCurriPlanService extends Service {
       const { planId, teachingClassId, className, courseName, courseCategory } = curriPlanIds[i];
       /* 以下是处理教学计划 */
       let detail = [];
-      let integratedDetail = [];
       if (courseCategory === '3') {
         const scheduleId = await this.ctx.model.Ssts.CourseScheduleSourceMap.findOne({
           where: { LECTURE_PLAN_ID: planId },
           attributes: [ 'courseScheduleId' ],
         }).then(result => (result ? result.courseScheduleId : null));
 
-        integratedDetail = await this.ctx.service.mySSTS.curriPlan.integratedDetail.getIntegratedPlanDetail({ JSESSIONID_A, planId, token, userId, scheduleId });
+        // 获取一体化课程的教学计划，并剔除已完成日志填写的课程
+        detail = await this.ctx.service.mySSTS.curriPlan.integratedDetail.getIntegratedPlanDetail({ JSESSIONID_A, planId, token, userId, scheduleId });
+        detail = cleaner.filterPastDateIntegratedPlans({ tomorrow, integratedPlans: detail });
         // console.dir(integratedDetail, { depth: null });
-        console.log('一体化课程的教学计划', integratedDetail[0]);
-        // console.log('存在一体化课程');
       } else {
         detail = await this.ctx.service.mySSTS.curriPlan.detail.getCurriPlanDetail({ JSESSIONID_A, planId, token });
         // [{
@@ -81,19 +80,19 @@ class MyCurriPlanService extends Service {
       }
 
       /* 以下是处理已填写的课程日志 */
-      // 提取日志摘要中的教学班 ID 与日志 ID 和课程性质
+      // 提取日志摘要中的教学班 ID 与日志 ID 和课程性质，以便后续处理
       const logIds = cleaner.extractLogIdentifiers(logList);
       let cleanedData = [];
 
       if (logIds[i]?.logId) {
         // 获取对应 logIds 已填写的教学日志详情
         let completedLogs = await this.ctx.service.mySSTS.teachingLog.detail.getTeachingLogDetail({ JSESSIONID_A, teachingClassId, token });
+        // 对 SECTION_ID （课程节次，如2，1）按升序排序
+        completedLogs = cleaner.sortSectionIds(completedLogs);
+        // 剔除已完成日志的教学明细
         if (logIds[i].courseCategory === '3') {
-          console.log('存在一体化课程日志', completedLogs[0]);
+          cleanedData = cleaner.removeIntegratedDuplicates(detail, completedLogs);
         } else {
-          // 对 SECTION_ID （课程节次，如2，1）按升序排序
-          completedLogs = cleaner.sortSectionIds(completedLogs);
-          // 剔除已完成日志的教学明细
           cleanedData = cleaner.removeDuplicates(detail, completedLogs);
         }
       } else {
@@ -107,16 +106,21 @@ class MyCurriPlanService extends Service {
         item.courseName = courseName;
       });
 
+      // 继续格式化一体化数据，一体化数据日志和计划的字段有很大差别，普通课程不存在这个问题
+      if (logIds[i].courseCategory === '3') {
+        cleanedData = cleanedData.map(item => cleaner.prepareIntegratedTeachingLogData(item)).filter(Boolean);
+      }
+
       allCurriDetails.push(...cleanedData);
     }
 
-    // 第五步：排序和格式化数据
+    // 第五步：混合所有课程（实践、理论、一体化）后排序，并进一步格式化数据
     allCurriDetails.sort(cleaner.sortFinalDetails);
     const curriDetails = cleaner.cleanCurriDetailsData(allCurriDetails);
 
     return {
-      planList,
-      curriDetails,
+      planList, // 前台用于显示原始教学计划的数据，准备废弃（前端已经显示更清晰的课程表）
+      curriDetails, // 需要填报的预处理后的教学日志数据
     };
   }
 }

@@ -236,6 +236,7 @@ class StaffWorkLoadViewConnector {
     // 获取校历事件
     const events = await ctx.model.Plan.CalendarEvent.findAll({
       where: eventsWhereCondition,
+      raw: true,
     });
 
     // 构建查询条件
