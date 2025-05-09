@@ -18,9 +18,11 @@ class MyCurriPlanService extends Service {
 
     // 第一步：获取教学计划摘要数据
     const planListRaw = await this.ctx.service.mySSTS.curriPlan.list.getCurriPlanList({ JSESSIONID_A, userId, token });
+    // console.log('教学计划摘要数据', planListRaw);
 
     // 第二步：获取已填写教学日志的概览数据
     const logList = await this.ctx.service.mySSTS.teachingLog.list.getTeachingLogList({ JSESSIONID_A, userId, token });
+    // console.log('已填写教学日志的概览数据', logList);
 
     // 第三步：清洗教学计划数据、提取 planId 与 teachingClassId 标识符
     const cleaner = this.ctx.service.mySSTS.curriPlan.cleaner;
@@ -40,13 +42,14 @@ class MyCurriPlanService extends Service {
           where: { LECTURE_PLAN_ID: planId },
           attributes: [ 'courseScheduleId' ],
         }).then(result => (result ? result.courseScheduleId : null));
-
         // 获取一体化课程的教学计划，并剔除已完成日志填写的课程
         detail = await this.ctx.service.mySSTS.curriPlan.integratedDetail.getIntegratedPlanDetail({ JSESSIONID_A, planId, token, userId, scheduleId });
+        // console.dir(detail, { depth: null });
         detail = cleaner.filterPastDateIntegratedPlans({ tomorrow, integratedPlans: detail });
-        // console.dir(integratedDetail, { depth: null });
+        // console.dir(detail, { depth: null });
       } else {
         detail = await this.ctx.service.mySSTS.curriPlan.detail.getCurriPlanDetail({ JSESSIONID_A, planId, token });
+        // console.dir(detail, { depth: null });
         // [{
         //   SECTION_NAME: '第二节,第一节',
         //   UPDATE_USER_ID: '3236',

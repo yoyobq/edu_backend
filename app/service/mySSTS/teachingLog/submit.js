@@ -6,18 +6,18 @@ const Service = require('egg').Service;
 
 /**
  * 提交教学日志表单（SSTS 系统）
- *
- * 参数 teachingLogInput: {
- *   teachingLogData: object, // 日志数据主体
- *   JSESSIONID_A: string,    // 会话 cookie
- *   token: string            // 教务系统授权 token
- * }
- *
- * WARNING: 看似和一体化一样，不要合并！不要合并！不要合并
- * 本函数将模板字段与用户输入合并后，发起加密请求。
- * 成功时返回数据，失败时抛出错误供上层捕获处理。
  */
 class TeachingLogSubmitService extends Service {
+  /**
+  * WARNING: 看似和一体化一样，不要合并！不要合并！不要合并
+  * 本函数将模板字段与用户输入合并后，发起加密请求。
+  * 成功时返回数据，失败时抛出错误供上层捕获处理。
+  *
+  * @param {Object} param  - 参数对象
+  * @param {Object} param.teachingLogData  - 日志数据主体
+  * @param {string} param.JSESSIONID_A  - 会话 cookie
+  * @param {string} param.token  - 教务系统授权 token
+  */
   async submitTeachingLog({ teachingLogData, JSESSIONID_A, token }) {
     // 教务系统需要提交完整字段，因此预填所有字段模板
     const templateData = {
@@ -159,7 +159,12 @@ class TeachingLogSubmitService extends Service {
     // 合并用户输入数据与模板字段
     const completeTeachingLogData = {};
     for (const key in templateData) {
-      completeTeachingLogData[key] = teachingLogData.hasOwnProperty(key) ? teachingLogData[key] : templateData[key];
+      // 对 section_id 字段进行特殊处理，始终设置为空字符串
+      if (key === 'section_id') {
+        completeTeachingLogData[key] = '';
+      } else {
+        completeTeachingLogData[key] = teachingLogData.hasOwnProperty(key) ? teachingLogData[key] : templateData[key];
+      }
     }
 
     // 动态构造 URL（含随机 winTemp 参数，避免请求重复缓存）
@@ -184,41 +189,42 @@ class TeachingLogSubmitService extends Service {
 
     console.log(completeTeachingLogData);
     // 加密日志数据
-    // const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(completeTeachingLogData);
+    const payload = await this.ctx.service.common.sstsCipher.encryptDataNoPasswd(completeTeachingLogData);
 
-    // let response;
-    // try {
-    //   // 发送 POST 请求提交日志
-    //   response = await this.ctx.curl(url, {
-    //     method: 'POST',
-    //     headers,
-    //     data: payload,
-    //     dataType: 'string',
-    //     timeout: 30000,
-    //   });
-    // } catch (error) {
-    //   // 网络异常或服务端连接失败
-    //   throw error;
-    // }
+    let response;
+    try {
+      // 发送 POST 请求提交日志
+      response = await this.ctx.curl(url, {
+        method: 'POST',
+        headers,
+        data: payload,
+        dataType: 'string',
+        timeout: 30000,
+      });
+    } catch (error) {
+      // 网络异常或服务端连接失败
+      throw error;
+    }
 
-    // // 解密返回内容
-    // const decoded = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
+    // 解密返回内容
+    const decoded = await this.ctx.service.common.sstsCipher.decryptData(response.data.toString());
 
-    // // 统一错误处理逻辑
-    // if (!decoded.success) {
-    //   const errorHandler = this.ctx.service.mySSTS.errorHandler;
-    //   const errorResponse = decoded.msg
-    //     ? decoded
-    //     : { code: 400, msg: '一体教学日志提交时出错，成因复杂，请联系管理员排错。', success: false };
-    //   await errorHandler.handleScrapingError(errorResponse);
-    // }
+    // 统一错误处理逻辑
+    if (!decoded.success) {
+      const errorHandler = this.ctx.service.mySSTS.errorHandler;
+      const errorResponse = decoded.msg
+        ? decoded
+        : { code: 400, msg: '一体化教学日志提交时出错，成因复杂，请联系管理员排错。', success: false };
+      await errorHandler.handleScrapingError(errorResponse);
+    }
 
-    // return decoded.data;
+    return decoded.data;
   }
 }
 
 module.exports = TeachingLogSubmitService;
 
+// 普通课程提交实例
 // {
 //   data: {
 //     sstsSubmitTeachingLog: {
@@ -272,38 +278,6 @@ module.exports = TeachingLogSubmitService;
 //   }
 // }
 
-// {
-//   "absenceList":[],
-//   "teaching_class_id":"40349a5694255a8f019425bb965a24a9",// model.soucremap
-//   "teaching_date":"2025-04-21",
-//   "week_number":"10",
-//   "day_of_week":"1",
-//   "listening_teacher_id":"3236",
-//   "guidance_teacher_id":"",
-//   "listening_teacher_name":"3236徐洋",
-//   "lesson_hours":4,
-//   "minSectionId":"",
-//   "course_content":"",
-//   "homework_assignment":"",
-//   "topic_record":"",
-//   "section_id":"",
-//   "section_name":"",
-//   "journal_type":"3",
-//   "student_number":"",
-//   "shift":"1",  //！常日班3
-//   "problem_and_solve":"认识BIOS和CMOS、学会配置CMOS信息", // learn_target + 自定义
-//   "complete_and_summary":"学生能够认识BIOS和CMOS、学会配置CMOS信息",  //lear_target + 自定义
-//   "discipline_situation":"",
-//   "security_and_maintain":"",
-//   "lecture_plan_detail_id":"40349a56951709900195181f430e1829", // session_detail_id
-//   "lecture_journal_detail_id":"",
-//   "production_project_title":"",
-//   "lecture_lessons":0,
-//   "training_lessons":0,
-//   "example_lessons":0,
-//   "production_name":"",
-//   "production_plan_num":0,
-//   "production_qualified_num":0,
-//   "production_back_num":0,
-//   "production_waste_num":0
-// }
+// 一体化课程首次提交实例
+// {"absenceList":[],"teaching_class_id":"40349a5694255a8f019425bb965a24a9","teaching_date":"2025-05-05","week_number":"12","day_of_week":"1","listening_teacher_id":"3236","guidance_teacher_id":"","listening_teacher_name":"3236徐洋","lesson_hours":4,"minSectionId":"","course_content":"","homework_assignment":"","topic_record":"","section_id":"","section_name":"","journal_type":"3","student_number":"","shift":"3","problem_and_solve":"掌握局域网和广域网的基础知识，学会接入Internet","complete_and_summary":"学生能够掌握局域网和广域网的基础知识，学会接入Internet","discipline_situation":"纪律良好","security_and_maintain":"已完成保养","lecture_plan_detail_id":"40349a56951709900195181f430e1827","lecture_journal_detail_id":"","production_project_title":"","lecture_lessons":0,"training_lessons":0,"example_lessons":0,"production_name":"","production_plan_num":0,"production_qualified_num":0,"production_back_num":0,"production_waste_num":0}
+

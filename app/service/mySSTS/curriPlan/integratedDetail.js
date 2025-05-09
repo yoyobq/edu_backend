@@ -9,15 +9,18 @@ class IntegratedPlanService extends Service {
   async getIntegratedPlanDetail({ JSESSIONID_A, planId, token, userId, scheduleId }) {
     // 第一步.1 获取一体化课程教学计划的原始数据
     const originalData = await this.getIntegratedPlanDetailOrigin({ JSESSIONID_A, planId, token });
+    // console.log('获取到的一体化教学计划数据:');
+    // console.dir(originalData, { depth: null });
     // 第一步.2 获取一体化课程考试的原始数据（未使用）
     // console.dir(originalData.checkDTOList, { depth: null });
 
     // 第二步 对数据进行扁平化处理
     const flattenedData = this._flattenIntegratedPlanData(originalData.dataList);
+    // console.log('扁平化后的一体化教学计划数据:', flattenedData);
 
     // 第三步 排序并检查数据
     const sortedPlanData = this._sortAndCheckPlanData(flattenedData);
-    // console.log('排序后的数据:', sortedData);
+    // console.log('排序后的一体化教学计划数据:', sortedPlanData);
 
     // 第四步 获取上课的日期和节数
     const dateList = await this.ctx.service.plan.courseSchedulePreparer.actualTeachingDates({
@@ -27,10 +30,12 @@ class IntegratedPlanService extends Service {
       // 但校园网一体化课程计划里，居然没有考虑这个问题，所以这里也不考虑，防止不一致
       considerMakeup: false,
     });
+    // console.log('获取到的上课日期和节数:');
+    // console.dir(dateList, { depth: null });
 
-    // 第五步 扁平化上课的日期和节数数据
+    // 第五步 扁平化上课的日期和节数数据(和课程暂不相关，需要进一步匹配)
     const flattenedDateList = this._flattenDateList(dateList);
-    // console.log('扁平化后的数据:', flattenedDateList[0]);
+    // console.log('扁平化后的数据:', flattenedDateList);
 
     // 第六步 合并课程计划和上课日期数据
     const mergedData = this._mergePlanAndDateData(sortedPlanData, flattenedDateList);
@@ -81,14 +86,15 @@ class IntegratedPlanService extends Service {
 
       // 记录警告日志，但不抛出异常
       if (accumulatedHours !== requiredHours) {
-        console.log(`课时不足以完成计划，需要${requiredHours}课时，但只有${accumulatedHours}课时`);
+        console.log(`实际课时无法与计划课时匹配，计划课时还需要${requiredHours}课时，但实际课时只有${accumulatedHours}课时`);
       }
 
       // 创建结果项
       if (usedDates.length > 0) {
         result.push({
           ...planItem,
-          teachingDate: usedDates[usedDates.length - 1].date, // 使用最后一个日期作为完成日期
+          teachingDate: usedDates[0].date, // 使用首次开课日期日期作为完成日期
+          // teachingDateEnd: usedDates[usedDates.length - 1].date, // 使用最后一次开课日期日期作为完成日期
           section_id: this._generateSectionId(usedDates), // 调用新函数生成 section_id,这是一个方便排序的项，提交时应该清空内容s
           usedDates,
         });
@@ -153,33 +159,21 @@ class IntegratedPlanService extends Service {
 
   // 排序并检查数据函数
   _sortAndCheckPlanData(dataArray) {
-    // 按照 session_no 为主，task_no 为次进行排序
+    // 按照 week_number 为主，task_no 为次，session_no 为第三优先级进行排序
     dataArray.sort((a, b) => {
-      // 首先按 session_no 排序
-      if (a.session_no !== b.session_no) {
-        return a.session_no - b.session_no;
+      // 首先按 week_number 排序
+      if (a.week_number !== b.week_number) {
+        return a.week_number - b.week_number;
       }
-      // 如果 session_no 相同，则按 task_no 排序
-      return a.task_no - b.task_no;
+      // 如果 week_number 相同，则按 task_no 排序
+      if (a.task_no !== b.task_no) {
+        return a.task_no - b.task_no;
+      }
+      // 如果 task_no 相同，则按 session_no 排序
+      return a.session_no - b.session_no;
     });
 
-    // 检查 week_number 是否按升序排列
-    if (dataArray && dataArray.length > 1) {
-      let lastWeekNumber = dataArray[0].week_number;
-
-      for (let i = 1; i < dataArray.length; i++) {
-        const currentWeekNumber = dataArray[i].week_number;
-
-        // 检查当前的 week_number 是否小于前一个，如果是则抛出错误
-        if (currentWeekNumber < lastWeekNumber) {
-          // this.ctx.throw(500, '校园网中的一体化计划有错误：教学任务的顺序与上课周的顺序不符');
-          return [];
-        }
-
-        lastWeekNumber = currentWeekNumber;
-      }
-    }
-
+    // 不再需要检查 week_number 是否按升序排列，因为排序已经保证了这一点
     return dataArray;
   }
 
@@ -349,44 +343,6 @@ module.exports = IntegratedPlanService;
 //   "problem_and_solve": "无",
 //   "complete_and_summary": "佳",
 //   "lecture_plan_detail_id": "40349a56953b8b2001953ba92c5c032d",
-
-
-// 首次提交
-// {
-//   "absenceList": [],
-//   "teaching_class_id": "40349a5694255a8f019425bb970724b7",
-//   "teaching_date": "2025-04-07",
-//   "week_number": "8",
-//   "day_of_week": "1",
-//   "listening_teacher_id": "2230",
-//   "guidance_teacher_id": "",
-//   "listening_teacher_name": "2230金正",
-//   "lesson_hours": 0,
-//   "minSectionId": "",
-//   "course_content": "",
-//   "homework_assignment": "",
-//   "topic_record": "",
-//   "section_id": "",
-//   "section_name": "",
-//   "journal_type": "3",
-//   "student_number": "",
-//   "shift": "",
-//   "problem_and_solve": "无",
-//   "complete_and_summary": "佳",
-//   "discipline_situation": "",
-//   "security_and_maintain": "",
-//   "lecture_plan_detail_id": "40349a56953b8b2001953ba92c5c032d",
-//   "lecture_journal_detail_id": "",
-//   "production_project_title": "",
-//   "lecture_lessons": 0,
-//   "training_lessons": 0,
-//   "example_lessons": 0,
-//   "production_name": "",
-//   "production_plan_num": 0,
-//   "production_qualified_num": 0,
-//   "production_back_num": 0,
-//   "production_waste_num": 0
-// }
 
 
 // 这是一体化提交的数据格式

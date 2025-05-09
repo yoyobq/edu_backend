@@ -151,9 +151,9 @@ module.exports = {
   // 最终排序规则：按日期优先，再按节次升序
   sortFinalDetails(a, b) {
     // 获取对象a的日期，优先级：THEORY_TEACHING_DATE > PRACTICE_TEACHING_DATE > teachingDate
-    const dateA = a.THEORY_TEACHING_DATE || a.PRACTICE_TEACHING_DATE || a.teaching_date || '1970-01-01';
+    const dateA = a.THEORY_TEACHING_DATE || a.PRACTICE_TEACHING_DATE || a.teaching_date || '2070-01-01';
     // 获取对象b的日期，优先级：THEORY_TEACHING_DATE > PRACTICE_TEACHING_DATE > teachingDate
-    const dateB = b.THEORY_TEACHING_DATE || b.PRACTICE_TEACHING_DATE || b.teaching_date || '1970-01-01';
+    const dateB = b.THEORY_TEACHING_DATE || b.PRACTICE_TEACHING_DATE || b.teaching_date || '2070-01-01';
 
     const dateDiff = new Date(dateA) - new Date(dateB);
     if (dateDiff !== 0) return dateDiff;
@@ -226,7 +226,7 @@ module.exports = {
       journal_type: 3, // 一体化课程固定为3
       shift: '3', // 常日班
       problem_and_solve: planData.learn_target, // 使用学习目标作为问题与解决措施
-      complete_and_summary: `学生能够${planData.learn_target}`, // 在学习目标前加"学生能够"
+      complete_and_summary: `学生能够\n${planData.learn_target}`, // 在学习目标前加"学生能够"
       discipline_situation: '纪律良好',
       security_and_maintain: '已完成保养',
       lecture_plan_detail_id: planData.session_detail_id, // 使用session_detail_id作为lecture_plan_detail_id
