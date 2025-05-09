@@ -35,6 +35,12 @@ class SstsSpiderConnector {
     const logData = await this.ctx.service.mySSTS.teachingLog.submit.submitTeachingLog(input);
     return logData;
   }
+
+  async submitIntegratedTeachingLog(input) {
+    const logData = await this.ctx.service.mySSTS.teachingLog.submit.submitIntegratedTeachingLog(input);
+    return logData;
+  }
+
 }
 
 module.exports = SstsSpiderConnector;

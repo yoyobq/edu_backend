@@ -19,5 +19,10 @@ module.exports = {
       const res = await ctx.connector.sstsSpider.submitTeachingLog(input);
       return res;
     },
+
+    sstsSubmitIntegratedTeachingLog: async (_, { input }, ctx) => {
+      const res = await ctx.connector.sstsSpider.submitIntegratedTeachingLog(input);
+      return res;
+    },
   },
 };
