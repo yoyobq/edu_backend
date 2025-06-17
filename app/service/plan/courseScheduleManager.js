@@ -168,6 +168,7 @@ class CourseScheduleManagerService extends Service {
    * 查询某个教职工完整课表
    * @param {Object} param - 参数对象
    * @param {number} param.staffId - 教职工ID
+   * @param {number} [param.jobId] - 校园网里的教职工ID
    * @param {number} param.semesterId - 学期ID
    * @return {Promise<Array<{
    *  scheduleId: number,
@@ -184,10 +185,21 @@ class CourseScheduleManagerService extends Service {
    *  weekType: 'all' | 'odd' | 'even',
    * }>>} 返回一个扁平化的排课数组，每个元素包含主表信息与 slot 信息。
    */
-  async getFullScheduleByStaff({ staffId, semesterId }) {
-    // 查询与 staffId、semesterId 匹配的所有 CourseSchedule，并关联 slots
+  async getFullScheduleByStaff({ staffId, jobId, semesterId }) {
+    // 构建查询条件
+    const whereCondition = { semesterId };
+
+    // 如果 staffId 不为 0，使用 staffId 查询
+    // 否则，如果提供了 jobId，使用 jobId 查询
+    if (staffId !== 0) {
+      whereCondition.staffId = staffId;
+    } else if (jobId) {
+      whereCondition.sstsTeacherId = jobId;
+    }
+
+    // 查询与条件匹配的所有 CourseSchedule，并关联 slots
     const schedules = await this.ctx.model.Plan.CourseSchedule.findAll({
-      where: { staffId, semesterId },
+      where: whereCondition,
       include: [{
         model: this.ctx.model.Plan.CourseSlot,
         as: 'slots',
@@ -317,9 +329,9 @@ class CourseScheduleManagerService extends Service {
         // 解析周数字符串，确定当前周是否有课
         // weekNumberString 格式如 "1,1,1,0,1,1,0,..."，表示每周是否有课
         const weekNumberArray = schedule.weekNumberString.split(',').map(Number);
-
         // 检查当前周是否在周数范围内且该周有课 (值为1)
-        if (weekDiff >= 0 && weekDiff < weekNumberArray.length && weekNumberArray[weekDiff] === 1) {
+        if (weekDiff >= 0 && weekDiff < weekNumberArray.length && weekNumberArray[weekDiff - 1] === 1) {
+          // console.log(`日期: ${dateString}, 星期几: ${dayOfWeek}, 周数: ${weekDiff}, 有课`);
           // 筛选出当天星期几对应的课程时段
           schedule.slots
             .filter(slot => slot.dayOfWeek === dayOfWeek)
@@ -618,8 +630,6 @@ class CourseScheduleManagerService extends Service {
    * @param {Object} param - 参数对象
    * @param {Array} param.flatSchedules - 扁平化的课程安排
    * @param {Array} param.cancelDates - 取消日期列表
-   * @param {Array} param.makeupDays - 调课日期列表
-   * @param {Array} param.holidayMakeupDates - 补课日期列表（被调入课程的日期）
    * @param {Array} param.events - 校历事件列表
    * @param {Object} param.semester - 学期信息
    * @param {Array} param.weeks - 周数范围

@@ -167,6 +167,7 @@ input DailyScheduleInput {
 # FullScheduleInput 类型
 input FullScheduleInput {
   staffId: Int!
+  jobId: Int
   semesterId: Int!
 }
 
