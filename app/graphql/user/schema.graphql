@@ -16,6 +16,7 @@ type User {
   id: Int!                 # 使用 accountId 作为唯一标识
   loginName: String        # 登录名，对应 account 表中的 login_name
   nickname: String         # 昵称，对应 userInfo 表中的 nickname
+  birthDate: String
   loginEmail: String       # 对应 account 表中的 login_email
   avatar: String           # 对应 userInfo 表中的 avatar
   email: String!           # 对应 userInfo 表中的 email
@@ -48,7 +49,7 @@ type Student {
   id: Int!
   stuId: Int!
   name: String             # 学生姓名，对应 student 表中的 name
-  age: Int
+  birthDate: String
   departmentId: Int
   classId: Int             # 班级ID
   clubId: Int              # 社团ID

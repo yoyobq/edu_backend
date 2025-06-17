@@ -24,10 +24,6 @@ module.exports = app => {
       type: STRING(50),
       allowNull: true,
     },
-    age: {
-      type: INTEGER,
-      allowNull: true,
-    },
     departmentId: {
       type: INTEGER,
       allowNull: true,

@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = app => {
-  const { STRING, INTEGER, JSON } = app.Sequelize;
+  const { STRING, INTEGER, JSON, DATEONLY } = app.Sequelize;
 
   const tbn = 'base_user_info';
   const UserInfo = app.model.define(tbn, {
@@ -18,6 +18,11 @@ module.exports = app => {
     nickname: {
       type: STRING(50),
       allowNull: false,
+    },
+    birthDate: {
+      type: DATEONLY,
+      allowNull: false,
+      comment: '事件日期 (Event Date)',
     },
     avatar: {
       type: STRING(255),

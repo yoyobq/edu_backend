@@ -5,7 +5,7 @@ type Staff {
   accountId: Int!
   jobId: Int!
   name: String
-  age: Int
+  birthDate: String
   departmentId: Int
   createdAt: DateTime!
   updatedAt: DateTime!
