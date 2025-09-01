@@ -21,20 +21,20 @@ describe('课程时间安排 Service: test/service/courseSlot.test 测试', () =
     assert(courseSlot.id === 1, '课程时间安排 ID 应该匹配');
   });
 
-  it('2.应按学期获取课程时间安排 (semesterId = 2)', async () => {
-    const courseSlots = await ctx.service.plan.courseSlot.listCourseSlots({ semesterId: 2 });
+  it('2.应按学期获取课程时间安排 (semesterId = 3)', async () => {
+    const courseSlots = await ctx.service.plan.courseSlot.listCourseSlots({ semesterId: 3 });
     assert(Array.isArray(courseSlots), '返回的数据应为数组');
     assert(courseSlots.length > 0, '应返回至少一个课程时间安排');
   });
 
-  it('3.应按教师获取课程时间安排 (staffId = 2)', async () => {
-    const courseSlots = await ctx.service.plan.courseSlot.listCourseSlots({ staffId: 2 });
+  it('3.应按教师获取课程时间安排 (staffId = 3)', async () => {
+    const courseSlots = await ctx.service.plan.courseSlot.listCourseSlots({ staffId: 3 });
     assert(Array.isArray(courseSlots), '返回的数据应为数组');
     assert(courseSlots.length > 0, '应返回至少一个课程时间安排');
   });
 
-  it('4.应按学期和教师获取课程时间安排 (semesterId = 2, staffId = 2)', async () => {
-    const courseSlots = await ctx.service.plan.courseSlot.listCourseSlots({ semesterId: 2, staffId: 2 });
+  it('4.应按学期和教师获取课程时间安排 (semesterId = 3, staffId = 3)', async () => {
+    const courseSlots = await ctx.service.plan.courseSlot.listCourseSlots({ semesterId: 3, staffId: 3 });
     assert(Array.isArray(courseSlots), '返回的数据应为数组');
     assert(courseSlots.length > 0, '应返回至少一个课程时间安排');
   });

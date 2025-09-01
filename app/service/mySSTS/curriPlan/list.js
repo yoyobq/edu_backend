@@ -45,8 +45,8 @@ class CurriPlanListService extends Service {
       whereParams: {
         number: '1',
         userId,
-        school_year: '2024',
-        semester: '2',
+        school_year: '2025',
+        semester: '1',
         orgid: deptId, // string
         course_id: '',
       },

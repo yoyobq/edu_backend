@@ -37,7 +37,7 @@ module.exports = app => {
     },
     LECTURE_PLAN_ID: {
       type: STRING(32),
-      allowNull: false,
+      allowNull: true,
       field: 'LECTURE_PLAN_ID',
       comment: '教务系统的教学计划 ID，唯一标识',
     },

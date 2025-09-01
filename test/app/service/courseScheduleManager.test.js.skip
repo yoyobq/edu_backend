@@ -8,7 +8,7 @@
 const { app, assert } = require('egg-mock/bootstrap');
 
 describe('课程表管理服务: test/service/courseScheduleManager.test.js', () => {
-  const testSemesterId = 2;
+  const testSemesterId = 3;
   const testStaffId = 2;
   // before(async () => {
   //   const ctx = app.mockContext();
@@ -34,7 +34,7 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
       semesterId: testSemesterId,
     });
     // console.log(staffId, semesterId);
-    // console.log(schedules);
+    console.log(schedules);
     assert(Array.isArray(schedules), '应返回数组类型');
   });
 
@@ -42,7 +42,7 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
     const ctx = app.mockContext();
     const schedules = await ctx.service.plan.courseScheduleManager.getDailySchedule({
       staffId: testStaffId,
-      date: '2024-12-27',
+      date: '2025-12-24',
     });
 
     // console.log(schedules);
@@ -55,7 +55,7 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
     const ctx = app.mockContext();
     const schedules = await ctx.service.plan.courseScheduleManager.getDailySchedule({
       staffId: testStaffId,
-      date: '2025-04-27',
+      date: '2025-09-28',
     });
 
     // console.log(schedules);
@@ -66,7 +66,7 @@ describe('课程表管理服务: test/service/courseScheduleManager.test.js', ()
     const ctx = app.mockContext();
     const schedules = await ctx.service.plan.courseScheduleManager.getDailySchedule({
       staffId: testStaffId,
-      date: '2025-05-02',
+      date: '2025-10-02',
     });
 
     assert(Array.isArray(schedules) && schedules.length === 0, '应返空回数组');

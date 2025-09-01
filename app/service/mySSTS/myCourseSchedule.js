@@ -15,18 +15,52 @@ class myCourseScheduleService extends Service {
 
     // 2. 获取排课数据
     const planList = await this._fetchPlanList({ JSESSIONID_A, token });
+
+    // 添加调试日志：查看原始数据
+    console.log('=== 原始数据分析 ===');
+    console.log('原始 planList 长度:', planList.length);
+
+    if (planList.length > 0) {
+      console.log('第一条数据示例:');
+      console.log(JSON.stringify(planList[0], null, 2));
+
+      // 统计 LECTURE_PLAN_ID 的情况
+      const validIds = planList.filter(item => item.LECTURE_PLAN_ID);
+      const nullIds = planList.filter(item => !item.LECTURE_PLAN_ID);
+
+      console.log('有效 LECTURE_PLAN_ID 的数据项数量:', validIds.length);
+      console.log('LECTURE_PLAN_ID 为空的数据项数量:', nullIds.length);
+
+      if (nullIds.length > 0) {
+        console.log('LECTURE_PLAN_ID 为空的数据项示例:');
+        console.log(JSON.stringify(nullIds[0], null, 2));
+      }
+
+      if (validIds.length > 0) {
+        console.log('有效 LECTURE_PLAN_ID 的数据项示例:');
+        console.log(JSON.stringify(validIds[0], null, 2));
+      }
+    }
+
     this._filterPlanListForCheck(planList);
 
     // 3. 获取 Semester 映射
     const semesterMap = await this._fetchSemesterMap();
+    console.log('semesterMap:', semesterMap);
 
     // 4. 获取 Staff 映射
     const staffMap = await this._fetchStaffMap(planList);
+    console.log('staffMap 键数量:', Object.keys(staffMap).length);
 
     // 5. 数据清洗
     const courseScheduleFiltered = this.cleanCourseSchedule(planList, semesterMap, staffMap);
     const courseScheduleSourceMapFiltered = this.cleanCourseScheduleSourceMap(planList, semesterMap, staffMap);
     const weekNumberSimpstrFiltered = this.cleanWeekNumberSimpstr(planList);
+
+    console.log('=== 清洗后数据分析 ===');
+    console.log('courseScheduleFiltered 长度:', courseScheduleFiltered.length);
+    console.log('courseScheduleSourceMapFiltered 长度:', courseScheduleSourceMapFiltered.length);
+    console.log('weekNumberSimpstrFiltered 长度:', weekNumberSimpstrFiltered.length);
 
     // 6. 调用封装的函数来检查数组长度并合并数组
     const combinedArray = this._combineCourseData(
@@ -35,20 +69,11 @@ class myCourseScheduleService extends Service {
       weekNumberSimpstrFiltered
     );
 
-    // 7. 调用我们实现的“先删再插”逻辑（或其他写库逻辑）
-    //    - 因为外部系统是唯一且权威的数据源，我们不需要保留旧数据。
-    //      每次发现重复（LECTURE_PLAN_ID 已存在）时，通过在同一个事务中先删除旧记录，再插入新数据，
-    //      可确保数据完全覆盖、保持与外部系统的一致性。
-    //    - 完整流程简介：
-    //       - 遍历 combinedArray，对每条课程记录根据 LECTURE_PLAN_ID 查询是否已有旧数据
-    //       - 若已存在，则在同一个事务里删除其关联的主表和子表记录
-    //       - 然后插入新的 courseSchedule、courseScheduleSourceMap、courseSlot 等表记录
-    //       - 若没有重复记录，则直接新建
-    //       - 所有操作在一个事务中，最终一起提交或回滚
+    console.log('合并后 combinedArray 长度:', combinedArray.length);
+
+    // 7. 调用我们实现的"先删再插"逻辑（或其他写库逻辑）
     await this._saveCourseDataWithTransaction(combinedArray);
 
-    // last setp. 只返回部分字段供外部快速核查
-    // const filtered = this._filterPlanListForCheck(planList);
     return combinedArray;
   }
 
@@ -73,10 +98,9 @@ class myCourseScheduleService extends Service {
    * @param {string} param.userId - 校园网教师 ID
    */
   async _fetchPlanList({ JSESSIONID_A, token, userId }) {
-    const myCurriPlanService = await this.ctx.service.mySSTS.myCurriPlan;
     const deptId = 'ORG0302';
-    // userId 是临时数据
-    const planList = await myCurriPlanService.getCurriPlanListSSTS({
+    // 直接调用 curriPlan.list 服务获取原始课程计划数据
+    const planList = await this.ctx.service.mySSTS.curriPlan.list.getCurriPlanList({
       JSESSIONID_A,
       token,
       deptId,
@@ -146,6 +170,13 @@ class myCourseScheduleService extends Service {
     * @param {Array} combinedArray - 包含了三表数据的对象数组
     */
   async _saveCourseDataWithTransaction(combinedArray) {
+    console.log('开始保存数据，combinedArray 长度:', combinedArray.length);
+
+    if (combinedArray.length === 0) {
+      console.log('没有数据需要保存');
+      return;
+    }
+
     // 1. 启动事务
     const t = await this.ctx.model.transaction();
     try {
@@ -154,21 +185,22 @@ class myCourseScheduleService extends Service {
         const newSourceMapData = item.courseScheduleSourceMap;
         const lecturePlanId = newSourceMapData.LECTURE_PLAN_ID;
 
-        // 2.1 先查询是否存在同样的 LECTURE_PLAN_ID
-        const existingSourceMap = await this.ctx.model.Ssts.CourseScheduleSourceMap.findOne({
-          where: { LECTURE_PLAN_ID: lecturePlanId },
-          transaction: t,
-        });
+        console.log('处理 LECTURE_PLAN_ID:', lecturePlanId);
 
-        // 2.2 如果存在，则在同一个事务中先删除旧记录
-        if (existingSourceMap) {
-          // 通过关联拿到旧的 courseSchedule
-          const oldSchedule = await existingSourceMap.getCourseSchedule({ transaction: t });
-          if (oldSchedule) {
-            // 这行操作会触发级联删除, 前提是:
-            // 1) 在 model 定义里 hasOne/hasMany 设置了 onDelete: 'CASCADE', hooks: true
-            // 2) 数据库中真正有对应的外键 或者 至少启用 Sequelize 级联钩子
-            await oldSchedule.destroy({ transaction: t });
+        // 2.1 只有当 LECTURE_PLAN_ID 不为 null 时才检查重复
+        if (lecturePlanId) {
+          const existingSourceMap = await this.ctx.model.Ssts.CourseScheduleSourceMap.findOne({
+            where: { LECTURE_PLAN_ID: lecturePlanId },
+            transaction: t,
+          });
+
+          // 2.2 如果存在，则在同一个事务中先删除旧记录
+          if (existingSourceMap) {
+            console.log('找到已存在的记录，准备删除');
+            const oldSchedule = await existingSourceMap.getCourseSchedule({ transaction: t });
+            if (oldSchedule) {
+              await oldSchedule.destroy({ transaction: t });
+            }
           }
         }
 
@@ -182,29 +214,39 @@ class myCourseScheduleService extends Service {
         }, { transaction: t });
 
         // 2.5 批量插入 slots
-        await Promise.all(item.courseSlotArray.map(async slot => {
-          // console.log(slot);
-          await this.ctx.model.Plan.CourseSlot.create({
-            ...slot,
-            courseScheduleId: newSchedule.id,
-            staffId: newSchedule.staffId,
-            periodStart: slot.period[0],
-            periodEnd: slot.period[slot.period.length - 1],
-            semesterId: newSchedule.semesterId,
-          }, { transaction: t });
-        }));
+        if (item.courseSlotArray && item.courseSlotArray.length > 0) {
+          const chineseNumbers = [ '', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十' ];
+
+          await Promise.all(item.courseSlotArray.map(async slot => {
+            const numericPeriods = slot.periods
+              .filter(p => p && p.trim() !== '') // 过滤掉空字符串
+              .map(p => chineseNumbers.indexOf(p) || parseInt(p) || 0)
+              .filter(p => p > 0); // 过滤掉转换失败的0值
+
+            if (numericPeriods.length === 0) {
+              return; // 跳过无效的 slot
+            }
+
+            await this.ctx.model.Plan.CourseSlot.create({
+              ...slot,
+              courseScheduleId: newSchedule.id,
+              staffId: newSchedule.staffId,
+              periodStart: numericPeriods[0],
+              periodEnd: numericPeriods[numericPeriods.length - 1],
+              semesterId: newSchedule.semesterId,
+            }, { transaction: t });
+          }));
+        }
       }
 
       // 3. 都成功，提交事务
+      console.log('准备提交事务');
       await t.commit();
+      console.log('事务提交成功');
     } catch (error) {
+      console.log('事务回滚，错误信息:', error);
       await t.rollback();
-      // 1. 打印到 Egg.js 的日志里 (logs目录 or console)
-      // this.logger.error('批量插入课程表数据失败，错误信息：', error);
-
-      // 2. 或者直接在 throw 前 console.log
       console.log('真实错误信息：', error);
-
       this.ctx.throw(500, '批量插入课程表数据失败', { error });
     }
   }
@@ -226,26 +268,27 @@ class myCourseScheduleService extends Service {
       5: 'CLASS_MEETING',
     };
 
-    return planList.map(item => ({
-      staffId: staffMap[item.TEACHER_IN_CHARGE_ID] || 0, // 根据 jobId 查找 staffId
-      sstsTeacherId: item.TEACHER_IN_CHARGE_ID, // courseSchedule.sstsTeacherId (string)
-      staffName: item.TEACHER_NAME, // courseSchedule.name (string) 例："张三"
-      teachingClassName: item.CLASS_NAME, // courseSchedule.teachingClassName (string) 例："信科2021班"
-      classroomId: null,
-      classroomName: '未记录',
-      courseId: null,
-      courseName: item.COURSE_NAME, // courseSchedule.courseName (string) 例："1031304G窗帘设计与制作"
-      // semester: item.SEMESTER, // courseSchedule.semesterId => semesters.termNumber (string) 例："2"
-      // schoolYear: item.SCHOOL_YEAR, // courseSchedule.semesterId => semesters.schoolYear (string) 例："2024"
-      semesterId: semesterMap[`${item.SCHOOL_YEAR}-${item.SEMESTER}`] || null, // 使用预加载的学期映射表
-      weekCount: item.WEEK_COUNT, // courseSchedule.weekCount (number) 例：16
-      weeklyHours: item.WEEKLY_HOURS, // courseSchedule.weeklyHours (number) 例：4
-      credits: item.CREDITS, // courseSchedule.credit (number) 例：6
-      coefficient: item.CLASS_NAME.includes(',') ? 1.6 : 1.0, // courseSchedule.is_wil (boolean) 例：1
-      courseCategory: categoryMap[item.COURSE_CATEGORY] || 'OTHER', // courseSchedule.courseCategory
-      weekNumberSimpstr: item.WEEK_NUMBER_SIMPSTR,
-      weekNumberString: item.WEEK_NUMBER_STRING, // courseSchedule.weekNumberString (string) 例："1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0"
-    }));
+    return planList
+      .map(item => ({
+        staffId: staffMap[item.TEACHER_IN_CHARGE_ID] || 0,
+        sstsTeacherId: item.TEACHER_IN_CHARGE_ID,
+        staffName: item.TEACHER_NAME,
+        teachingClassName: item.CLASS_NAME,
+        classroomId: null,
+        classroomName: '未记录',
+        courseId: null,
+        courseName: item.COURSE_NAME, // courseSchedule.courseName (string) 例："1031304G窗帘设计与制作"
+        // semester: item.SEMESTER, // courseSchedule.semesterId => semesters.termNumber (string) 例："2"
+        // schoolYear: item.SCHOOL_YEAR, // courseSchedule.semesterId => semesters.schoolYear (string) 例："2024"
+        semesterId: semesterMap[`${item.SCHOOL_YEAR}-${item.SEMESTER}`] || null, // 使用预加载的学期映射表
+        weekCount: item.WEEK_COUNT, // courseSchedule.weekCount (number) 例：16
+        weeklyHours: item.WEEKLY_HOURS, // courseSchedule.weeklyHours (number) 例：4
+        credits: item.CREDITS, // courseSchedule.credit (number) 例：6
+        coefficient: item.CLASS_NAME.includes(',') ? 1.6 : 1.0, // courseSchedule.is_wil (boolean) 例：1
+        courseCategory: categoryMap[item.COURSE_CATEGORY] || 'OTHER', // courseSchedule.courseCategory
+        weekNumberSimpstr: item.WEEK_NUMBER_SIMPSTR,
+        weekNumberString: item.WEEK_NUMBER_STRING, // courseSchedule.weekNumberString (string) 例："1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0"
+      }));
   }
 
   /**
@@ -256,15 +299,16 @@ class myCourseScheduleService extends Service {
    * @return {Array} 清洗后的课程计划数据
    */
   cleanCourseScheduleSourceMap(planList, semesterMap, staffMap) {
-    return planList.map(item => ({
-      LECTURE_PLAN_ID: item.LECTURE_PLAN_ID, // courseScheduleSourceMap.LECTURE_PLAN_ID (string) 例："40349a56953b8b2001953fba54572e78"
-      COURSE_ID: item.COURSE_ID || 0, // courseScheduleSourceMap.COURSE_ID (string) 例："FD19C83BBE5F46D8BD60D90C4493A69A"
-      TEACHER_IN_CHARGE_ID: item.TEACHER_IN_CHARGE_ID, // courseScheduleSourceMap.TEACHER_IN_CHARGE_ID (string) 例："2226"
-      TEACHING_CLASS_ID: item.TEACHING_CLASS_ID, // courseScheduleSourceMap.TEACHING_CLASS_ID (string) 例："40349a5694255a8f019425bb967924ab"
-      // SELECTEDKEY: item.SELECTEDKEY, // courseScheduleSourceMap.TEACHING_CLASS_ID (string) 例："40349a5694255a8f019425bb967924ab"
-      staffId: staffMap[item.TEACHER_IN_CHARGE_ID] || 0, // 根据 jobId 查找 staffId
-      semesterId: semesterMap[`${item.SCHOOL_YEAR}-${item.SEMESTER}`] || null, // 使用预加载的学期映射表
-    }));
+    return planList
+      .map(item => ({
+        LECTURE_PLAN_ID: item.LECTURE_PLAN_ID, // courseScheduleSourceMap.LECTURE_PLAN_ID (string) 例："40349a56953b8b2001953fba54572e78"
+        COURSE_ID: item.COURSE_ID || 0, // courseScheduleSourceMap.COURSE_ID (string) 例："FD19C83BBE5F46D8BD60D90C4493A69A"
+        TEACHER_IN_CHARGE_ID: item.TEACHER_IN_CHARGE_ID, // courseScheduleSourceMap.TEACHER_IN_CHARGE_ID (string) 例："2226"
+        TEACHING_CLASS_ID: item.TEACHING_CLASS_ID, // courseScheduleSourceMap.TEACHING_CLASS_ID (string) 例："40349a5694255a8f019425bb967924ab"
+        // SELECTEDKEY: item.SELECTEDKEY, // courseScheduleSourceMap.TEACHING_CLASS_ID (string) 例："40349a5694255a8f019425bb967924ab"
+        staffId: staffMap[item.TEACHER_IN_CHARGE_ID] || 0, // 根据 jobId 查找 staffId
+        semesterId: semesterMap[`${item.SCHOOL_YEAR}-${item.SEMESTER}`] || null, // 使用预加载的学期映射表
+      }));
   }
 
   /**
@@ -273,57 +317,86 @@ class myCourseScheduleService extends Service {
    * @return {Array} 清洗后的课程计划数据
    */
   cleanWeekNumberSimpstr(planList) {
-    // const result = [];
-    return planList.map(item => {
+    return planList
+      .map(item => {
+        let weekNumberSimpStr = item.WEEK_NUMBER_SIMPSTR;
 
-      const weekNumberSimpStr = item.WEEK_NUMBER_SIMPSTR;
+        // 只有当 WEEK_NUMBER_SIMPSTR 为空、存在 WEEK_NUMBER_STRING 时，才根据规则生成
+        if (!weekNumberSimpStr && item.WEEK_NUMBER_STRING) {
+          const weekArray = item.WEEK_NUMBER_STRING.split(',').map(Number);
+          const activeWeeks = [];
 
-      const dayInfo = (weekNumberSimpStr.match(/]([^[]+)/g) || [])
-        .map(str => str.slice(1).trim());
-      // console.log(dayInfo);
+          // 找出所有有课的周次
+          weekArray.forEach((hasClass, index) => {
+            if (hasClass === 1) {
+              activeWeeks.push(index + 1); // 周次从1开始
+            }
+          });
 
-      const charNumberMap = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+          if (activeWeeks.length > 0) {
+            // 生成周次范围
+            const weekRange = this._generateWeekRange(activeWeeks);
 
-      const dayInfoFormatted = dayInfo.flatMap(info => {
-        // 1) 匹配出「星期几 + 余下所有节次字符串」
-        const dayOfWeekMatch = info.match(/星期([一二三四五六日])\s*(.+)/);
-        // 2) dayOfWeek 数字化
-        const dayOfWeek = charNumberMap[dayOfWeekMatch[1]];
-        // 3) 提取所有 "第X节" 并转换为数字数组
-        const periodsMatch = (dayOfWeekMatch && dayOfWeekMatch[2].match(/第([一二三四五六七八九十\d]+)节/g))
-          // 从 "第X节" 截取中间的 X
-          .map(item => item.match(/第([一二三四五六七八九十\d]+)节/)[1])
-          // 将中文数字（或偶尔出现的阿拉伯数字）转换成纯数字
-          .map(ch => charNumberMap[ch] || Number(ch));
+            // 根据规则生成完整的课程安排
+            const scheduleSegments = [];
 
-        // 4) 按「上午(1-4) / 下午(5-6)」切分
-        // 如果 periodsMatch 同时有 [1,2,3,4] 与 [5,6]，就拆分为两条
-        const morning = periodsMatch.filter(p => p <= 4);
-        const afternoon = periodsMatch.filter(p => p >= 5);
+            // 星期一到星期五的课程安排
+            const weekdays = [ '一', '二', '三', '四', '五' ];
+            weekdays.forEach(day => {
+              let periods;
+              if (day === '三') {
+                // 星期三只有4节课
+                periods = '第一节,第二节,第三节,第四节';
+              } else {
+                // 其他工作日都是7节课
+                periods = '第一节,第二节,第三节,第四节,第五节,第六节,第七节';
+              }
+              scheduleSegments.push(`${weekRange} 星期${day} ${periods}`);
+            });
 
-        // 5) 组装返回结果：可能是一条，也可能是两条
-        const periods = [];
-        if (morning.length > 0) {
-          // 处理四节连排一分为二
-          if (morning.length === 4 && morning.join() === '1,2,3,4') {
-            // 特殊拆分
-            periods.push(
-              { dayOfWeek, period: [ 1, 2 ] },
-              { dayOfWeek, period: [ 3, 4 ] }
-            );
-          } else {
-            // 切割上午
-            periods.push({ dayOfWeek, period: morning });
+            weekNumberSimpStr = scheduleSegments.join(',');
+            console.log(`从 WEEK_NUMBER_STRING 推导出 WEEK_NUMBER_SIMPSTR: ${weekNumberSimpStr}`);
           }
         }
-        if (afternoon.length > 0) {
-          // 切割下午
-          periods.push({ dayOfWeek, period: afternoon });
+
+        // 如果仍然没有有效的 WEEK_NUMBER_SIMPSTR，返回空数组
+        if (!weekNumberSimpStr) {
+          console.log('跳过无效的课程数据项：', JSON.stringify(item, null, 2));
+          return []; // 返回空数组而不是 null
         }
-        return periods;
-      }).filter(Boolean);
-      return dayInfoFormatted.length > 0 ? dayInfoFormatted : []; // 确保返回非空数组或 null
-    });
+
+        // 继续处理有效的 WEEK_NUMBER_SIMPSTR 数据
+        const dayInfo = (weekNumberSimpStr.match(/]([^[]+)/g) || [])
+          .map(str => str.slice(1).trim());
+
+        const charNumberMap = {
+          一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 7,
+        };
+
+        const result = [];
+        dayInfo.forEach(info => {
+          const parts = info.split(' ');
+          if (parts.length >= 2) {
+            const dayStr = parts[0].replace('星期', '');
+            const dayOfWeek = charNumberMap[dayStr];
+            const periodsStr = parts.slice(1).join(' ');
+
+            const periods = periodsStr.split(',').map(p => {
+              const match = p.match(/第(\S+)节/);
+              return match ? match[1] : p;
+            }).filter(p => p && p.trim() !== ''); // 过滤掉空字符串和只包含空白字符的字符串
+
+            result.push({
+              LECTURE_PLAN_ID: item.LECTURE_PLAN_ID,
+              dayOfWeek,
+              periods,
+              timeSlot: `${dayStr} ${periodsStr}`,
+            });
+          }
+        });
+
+        return result; // 返回数组，每个原始项对应一个数组
+      }); // 不再使用 .flat()，保持与其他方法相同的结构
   }
 
   /**
@@ -346,6 +419,28 @@ class myCourseScheduleService extends Service {
     }));
 
     console.log(filtered);
+  }
+
+  // 辅助方法：生成周次范围字符串
+  _generateWeekRange(weeks) {
+    if (weeks.length === 0) return '';
+
+    // 找到连续的周次范围
+    const ranges = [];
+    let start = weeks[0];
+    let end = weeks[0];
+
+    for (let i = 1; i < weeks.length; i++) {
+      if (weeks[i] === end + 1) {
+        end = weeks[i];
+      } else {
+        ranges.push(start === end ? `[${start}]` : `[${start}-${end}]`);
+        start = end = weeks[i];
+      }
+    }
+
+    ranges.push(start === end ? `[${start}]` : `[${start}-${end}]`);
+    return ranges.join(',');
   }
 }
 
