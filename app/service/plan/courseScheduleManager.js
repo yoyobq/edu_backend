@@ -684,29 +684,6 @@ class CourseScheduleManagerService extends Service {
           moment(targetDate).diff(moment(semester.firstTeachingDate), 'days') / 7
         );
 
-        // 添加调试信息
-        // console.log('🔍 异常补课调试信息:', {
-        //   originalDate: targetDate,
-        //   makeupDate: displayDate,
-        //   dayOfWeek,
-        //   weekDiff,
-        //   weekNumber: weekDiff + 1,
-        //   firstTeachingDate: semester.firstTeachingDate,
-        //   flatSchedulesCount: flatSchedules.length,
-        //   matchingDaySchedules: flatSchedules.filter(s => s.dayOfWeek === dayOfWeek).length,
-        // });
-
-        // 输出匹配星期几的课程详情
-        // const daySchedules = flatSchedules.filter(s => s.dayOfWeek === dayOfWeek);
-        // if (daySchedules.length > 0) {
-        //   console.log('📅 匹配星期几的课程:', daySchedules.map(s => ({
-        //     scheduleId: s.scheduleId,
-        //     courseName: s.courseName,
-        //     dayOfWeek: s.dayOfWeek,
-        //     weekNumberString: s.weekNumberString,
-        //     weekNumberArray: s.weekNumberString.split(',').map(Number),
-        //   })));
-        // }
       } else {
         // 普通取消：使用取消日期本身
         targetDate = dateItem.date;
@@ -720,6 +697,7 @@ class CourseScheduleManagerService extends Service {
         weekDiff = Math.floor(
           moment(targetDate).diff(moment(semester.firstTeachingDate), 'days') / 7
         );
+
       }
 
       // 创建基础日期信息对象（无论是否有课都包含）
