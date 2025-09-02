@@ -550,16 +550,42 @@ class CourseScheduleManagerService extends Service {
    * @return {Promise<Object|Array<Object>>} - 取消的课程信息及统计，如果传入数组则返回数组
    */
   async calculateCancelledCourses({ staffId = 0, sstsTeacherId, semester, weeks, events }) {
-    // 提取所有停课事件
-    let cancelDates = events.filter(e => e.teachingCalcEffect === 'CANCEL').map(e => e.date);
+    // 提取所有停课事件，转换为对象格式
+    let cancelDates = events.filter(e => e.teachingCalcEffect === 'CANCEL').map(e => ({
+      date: e.date,
+      type: 'cancel',
+    }));
 
     // 提取所有调课日期
     const makeupDays = events.filter(e => e.teachingCalcEffect === 'MAKEUP').map(e => e.originalDate);
 
+    // 检测异常重复上课情况
+    const abnormalMakeups = await this._detectAbnormalMakeups(events, semester);
+
     // 从 cancelDates 中移除同时存在于 makeupDays 中的日期
     // 因为这些日期的课程已经被调到其他日期上了，不应该计入扣课
-    cancelDates = cancelDates.filter(date => !makeupDays.includes(date));
-    console.log('cancelDates', cancelDates);
+    cancelDates = cancelDates.filter(cancelItem => !makeupDays.includes(cancelItem.date));
+
+    // 将异常补课信息添加到扣课列表中（用于扣课补偿）
+    const abnormalDates = abnormalMakeups.map(makeup => ({
+      makeupDate: makeup.makeupDate,
+      originalDate: makeup.originalDate,
+      type: 'abnormal',
+      makeupEvent: makeup.makeupEvent,
+      reason: makeup.reason,
+    }));
+
+    cancelDates = [ ...cancelDates, ...abnormalDates ];
+
+    // 调试输出：查看最终的扣课日期数据
+    // console.log('🔍 最终扣课日期数据:', {
+    //   原始停课日期: events.filter(e => e.teachingCalcEffect === 'CANCEL').map(e => e.date),
+    //   调课原始日期: events.filter(e => e.teachingCalcEffect === 'MAKEUP').map(e => e.originalDate),
+    //   异常补课情况: JSON.stringify(abnormalMakeups, null, 2),
+    //   异常补课对象: abnormalDates,
+    //   最终扣课列表: cancelDates,
+    // });
+
     // 获取教师课程安排（已包含扁平化和简化的数据）
     const teacherSchedulesData = await this.getSimpleTeacherSchedules({
       staffId,
@@ -636,29 +662,84 @@ class CourseScheduleManagerService extends Service {
    * @return {Promise<Array>} - 处理后的取消课程信息
    */
   async _processCancelledDates({ flatSchedules, cancelDates, events, semester, weeks }) {
-    let cancelledCourses = [];
+    let cancelledCourses = []; // Change from const to let
 
-    // 处理常规取消日期
-    for (const date of cancelDates) {
-      // 获取当天实际的星期几（已考虑调休）
-      const { dayOfWeek } = await this._resolveClassDay({ date, events });
+    for (const dateItem of cancelDates) {
+      let targetDate,
+        displayDate,
+        dayOfWeek,
+        weekDiff;
 
-      // 使用 moment 计算当前日期是学期第几周
-      const weekDiff = Math.floor(
-        moment(date).diff(moment(semester.firstTeachingDate), 'days') / 7
-      );
+      if (dateItem.type === 'abnormal') {
+        // 异常补课：使用原始日期查找课程，但显示补课日期
+        targetDate = dateItem.originalDate;
+        displayDate = dateItem.makeupDate;
+
+        // 获取原始日期的星期几（已考虑调休）
+        const resolvedDay = await this._resolveClassDay({ date: targetDate, events });
+        dayOfWeek = resolvedDay.dayOfWeek;
+
+        // 使用原始日期计算学期第几周
+        weekDiff = Math.floor(
+          moment(targetDate).diff(moment(semester.firstTeachingDate), 'days') / 7
+        );
+
+        // 添加调试信息
+        // console.log('🔍 异常补课调试信息:', {
+        //   originalDate: targetDate,
+        //   makeupDate: displayDate,
+        //   dayOfWeek,
+        //   weekDiff,
+        //   weekNumber: weekDiff + 1,
+        //   firstTeachingDate: semester.firstTeachingDate,
+        //   flatSchedulesCount: flatSchedules.length,
+        //   matchingDaySchedules: flatSchedules.filter(s => s.dayOfWeek === dayOfWeek).length,
+        // });
+
+        // 输出匹配星期几的课程详情
+        // const daySchedules = flatSchedules.filter(s => s.dayOfWeek === dayOfWeek);
+        // if (daySchedules.length > 0) {
+        //   console.log('📅 匹配星期几的课程:', daySchedules.map(s => ({
+        //     scheduleId: s.scheduleId,
+        //     courseName: s.courseName,
+        //     dayOfWeek: s.dayOfWeek,
+        //     weekNumberString: s.weekNumberString,
+        //     weekNumberArray: s.weekNumberString.split(',').map(Number),
+        //   })));
+        // }
+      } else {
+        // 普通取消：使用取消日期本身
+        targetDate = dateItem.date;
+        displayDate = dateItem.date;
+
+        // 获取当天实际的星期几（已考虑调休）
+        const resolvedDay = await this._resolveClassDay({ date: targetDate, events });
+        dayOfWeek = resolvedDay.dayOfWeek;
+
+        // 使用 moment 计算当前日期是学期第几周
+        weekDiff = Math.floor(
+          moment(targetDate).diff(moment(semester.firstTeachingDate), 'days') / 7
+        );
+      }
 
       // 创建基础日期信息对象（无论是否有课都包含）
       const dateInfo = {
-        date,
+        date: displayDate, // 显示日期（普通取消显示取消日期，异常补课显示补课日期）
         weekOfDay: dayOfWeek,
         weekNumber: weekDiff + 1,
         courses: [], // 初始化为空数组
       };
 
+      // 添加异常补课标记
+      if (dateItem.type === 'abnormal') {
+        dateInfo.isAbnormalDeduction = true;
+        dateInfo.originalDate = dateItem.originalDate;
+        dateInfo.reason = dateItem.reason;
+      }
+
       // 首先添加取消事件的备注
       const cancelEvent = events.find(e =>
-        e.teachingCalcEffect === 'CANCEL' && e.date === date
+        e.teachingCalcEffect === 'CANCEL' && e.date === targetDate
       );
       if (cancelEvent && cancelEvent.topic) {
         dateInfo.note = cancelEvent.topic;
@@ -671,10 +752,36 @@ class CourseScheduleManagerService extends Service {
 
         // 检查当前周是否有课
         const weekNumberArray = schedule.weekNumberString.split(',').map(Number);
-        return weekDiff >= 0 &&
+        const hasClass = weekDiff >= 0 &&
           weekDiff < weekNumberArray.length &&
           weekNumberArray[weekDiff] === 1;
+
+        // 为异常补课添加详细的筛选调试信息
+        // if (dateItem.type === 'abnormal') {
+        //   console.log('🔍 课程筛选详情:', {
+        //     scheduleId: schedule.scheduleId,
+        //     courseName: schedule.courseName,
+        //     scheduleDayOfWeek: schedule.dayOfWeek,
+        //     targetDayOfWeek: dayOfWeek,
+        //     dayMatch: schedule.dayOfWeek === dayOfWeek,
+        //     weekDiff,
+        //     weekNumberArray,
+        //     weekNumberArrayLength: weekNumberArray.length,
+        //     weekValue: weekNumberArray[weekDiff],
+        //     hasClass,
+        //   });
+        // }
+
+        return hasClass;
       });
+
+      // 为异常补课输出最终筛选结果
+      // if (dateItem.type === 'abnormal') {
+      //   console.log('🎯 异常补课最终筛选结果:', {
+      //     coursesForDayCount: coursesForDay.length,
+      //     courses: coursesForDay.map(c => ({ scheduleId: c.scheduleId, courseName: c.courseName })),
+      //   });
+      // }
 
       // 格式化返回数据
       if (coursesForDay.length > 0) {
@@ -799,6 +906,50 @@ class CourseScheduleManagerService extends Service {
 
     return results;
   }
+
+  /**
+ * 检测异常的补课安排（原始日期本身是上课日）
+ * @private
+ * @param {Array} events - 校历事件列表
+ * @param {Object} semester - 学期信息
+ * @return {Array} - 异常补课信息列表
+ */
+  async _detectAbnormalMakeups(events, semester) {
+    const abnormalMakeups = [];
+    const makeupEvents = events.filter(e => e.teachingCalcEffect === 'MAKEUP');
+
+    for (const makeup of makeupEvents) {
+      if (makeup.originalDate) {
+        const originalDateMoment = moment(makeup.originalDate);
+        const dayOfWeek = originalDateMoment.isoWeekday();
+
+        // 检查原始日期是否在学期范围内且为工作日
+        if (originalDateMoment.isBetween(semester.firstTeachingDate, semester.endDate, 'day', '[]') &&
+          dayOfWeek >= 1 && dayOfWeek <= 5) {
+
+          // 检查是否有对应的CANCEL事件
+          const hasCancel = events.some(e =>
+            e.teachingCalcEffect === 'CANCEL' &&
+          e.date === makeup.originalDate
+          );
+
+          if (!hasCancel) {
+            abnormalMakeups.push({
+              makeupDate: makeup.date,
+              originalDate: makeup.originalDate,
+              makeupEvent: makeup,
+              reason: '原始日期本身是上课日，存在重复上课',
+            });
+
+            // console.warn(`🚨 检测到异常调课：${makeup.originalDate} -> ${makeup.date}，原始日期本身是上课日`);
+          }
+        }
+      }
+    }
+
+    return abnormalMakeups;
+  }
 }
 
 module.exports = CourseScheduleManagerService;
+

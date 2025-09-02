@@ -262,6 +262,8 @@ class StaffWorkLoadViewConnector {
       events,
     });
 
+    // console.log('扣课反馈', JSON.stringify(allCancelledCourses, null, 2));
+
     // 如果没有结果，抛出异常（此情况基本不会发生）
     if (!allCancelledCourses) {
       ctx.throw(404, `未查到 semesterId 为 ${semester.name} 的相关扣课记录`);
@@ -286,11 +288,17 @@ class StaffWorkLoadViewConnector {
           dateInfo.courses.forEach(course => {
             const hours = (course.periodEnd - course.periodStart + 1) * course.coefficient;
 
-            // 检查日期是否为补课日，如果是则返回负值
-            if (dateInfo.isMakeup === true) {
+            // 检查是否为异常扣课补偿
+            if (dateInfo.isAbnormalDeduction === true) {
+              // 异常扣课补偿：也应该是负扣课，与正常补课格式一致
+              course.cancelledHours = parseFloat((-hours).toFixed(2));
+              totalCancelledHours -= hours;
+            } else if (dateInfo.isMakeup === true) {
+              // 正常补课日：负扣课
               course.cancelledHours = parseFloat((-hours).toFixed(2));
               totalCancelledHours -= hours;
             } else {
+              // 正常扣课
               course.cancelledHours = parseFloat(hours.toFixed(2));
               totalCancelledHours += hours;
             }
@@ -312,7 +320,7 @@ class StaffWorkLoadViewConnector {
         flatSchedules,
       });
     }
-
+    // console.log('扣课课表:', JSON.stringify(results, null, 2));
     return results;
   }
 
