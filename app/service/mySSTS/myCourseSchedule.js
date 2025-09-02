@@ -184,27 +184,36 @@ class myCourseScheduleService extends Service {
       for (const item of combinedArray) {
         const newSourceMapData = item.courseScheduleSourceMap;
         const lecturePlanId = newSourceMapData.LECTURE_PLAN_ID;
+        const courseId = newSourceMapData.COURSE_ID;
 
-        console.log('处理 LECTURE_PLAN_ID:', lecturePlanId);
+        console.log('处理 LECTURE_PLAN_ID:', lecturePlanId, 'COURSE_ID:', courseId);
 
-        // 2.1 只有当 LECTURE_PLAN_ID 不为 null 时才检查重复
+        let existingSourceMap = null;
+
+        // 2.1 优先使用 LECTURE_PLAN_ID 检查重复
         if (lecturePlanId) {
-          const existingSourceMap = await this.ctx.model.Ssts.CourseScheduleSourceMap.findOne({
+          existingSourceMap = await this.ctx.model.Ssts.CourseScheduleSourceMap.findOne({
             where: { LECTURE_PLAN_ID: lecturePlanId },
             transaction: t,
           });
+        } else if (courseId) {
+          // 2.2 如果 LECTURE_PLAN_ID 为空，则使用 COURSE_ID 检查重复
+          existingSourceMap = await this.ctx.model.Ssts.CourseScheduleSourceMap.findOne({
+            where: { COURSE_ID: courseId },
+            transaction: t,
+          });
+        }
 
-          // 2.2 如果存在，则在同一个事务中先删除旧记录
-          if (existingSourceMap) {
-            console.log('找到已存在的记录，准备删除');
-            const oldSchedule = await existingSourceMap.getCourseSchedule({ transaction: t });
-            if (oldSchedule) {
-              await oldSchedule.destroy({ transaction: t });
-            }
+        // 2.3 如果找到已存在的记录，则在同一个事务中先删除旧记录
+        if (existingSourceMap) {
+          console.log('找到已存在的记录，准备删除');
+          const oldSchedule = await existingSourceMap.getCourseSchedule({ transaction: t });
+          if (oldSchedule) {
+            await oldSchedule.destroy({ transaction: t });
           }
         }
 
-        // 2.3 再创建新的 courseSchedule
+        // 2.4 再创建新的 courseSchedule
         const newSchedule = await this.ctx.model.Plan.CourseSchedule.create(item.courseSchedule, { transaction: t });
 
         // 2.4 创建新的 sourceMap，并关联刚刚创建的 schedule ID
@@ -284,7 +293,13 @@ class myCourseScheduleService extends Service {
         weekCount: item.WEEK_COUNT, // courseSchedule.weekCount (number) 例：16
         weeklyHours: item.WEEKLY_HOURS, // courseSchedule.weeklyHours (number) 例：4
         credits: item.CREDITS, // courseSchedule.credit (number) 例：6
-        coefficient: item.CLASS_NAME.includes(',') ? 1.6 : 1.0, // courseSchedule.is_wil (boolean) 例：1
+        coefficient: (() => {
+          const parts = item.CLASS_NAME.split(',').length;
+          if (parts === 1) return 1.0;
+          if (parts === 2) return 1.6;
+          if (parts === 3) return 2.2;
+          return 1.0; // 默认值，处理其他情况
+        })(), // courseSchedule.is_wil (boolean) 例：1
         courseCategory: categoryMap[item.COURSE_CATEGORY] || 'OTHER', // courseSchedule.courseCategory
         weekNumberSimpstr: item.WEEK_NUMBER_SIMPSTR,
         weekNumberString: item.WEEK_NUMBER_STRING, // courseSchedule.weekNumberString (string) 例："1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0"
