@@ -17,17 +17,13 @@ module.exports = app => {
     },
     loginEmail: {
       type: STRING(100),
-      allowNull: false,
+      allowNull: true, // DDL中是DEFAULT NULL
       field: 'login_email',
     },
     loginPassword: {
-      type: STRING(30),
+      type: STRING(255), // 修正：从30改为255
       allowNull: false,
       field: 'login_password',
-    },
-    recentLoginHistory: {
-      type: JSON,
-      field: 'recent_login_history',
     },
     status: {
       type: ENUM('ACTIVE', 'BANNED', 'DELETED', 'PENDING', 'SUSPENDED', 'INACTIVE'),
@@ -35,15 +31,19 @@ module.exports = app => {
       defaultValue: 'PENDING',
       field: 'status',
     },
+    recentLoginHistory: {
+      type: JSON,
+      allowNull: true,
+      field: 'recent_login_history',
+    },
+    identityHint: { // 新增字段
+      type: STRING(30),
+      allowNull: true,
+      field: 'identity_hint',
+    },
   }, {
-    // freezeTableName: true,
     timestamps: true,
-    // tableName: tbn,
-    // underscored: true,
   });
 
-  // User.prototype.associate = function() {
-  //   app.model.User.hasMany(app.model.Post, { as: 'posts' });
-  // };
   return Account;
 };

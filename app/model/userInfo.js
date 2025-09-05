@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = app => {
-  const { STRING, INTEGER, JSON, DATEONLY } = app.Sequelize;
+  const { STRING, INTEGER, JSON, DATEONLY, ENUM } = app.Sequelize;
 
   const tbn = 'base_user_info';
   const UserInfo = app.model.define(tbn, {
@@ -19,13 +19,19 @@ module.exports = app => {
       type: STRING(50),
       allowNull: false,
     },
+    gender: {
+      type: ENUM('MALE', 'FEMALE', 'SECRET'), // 修正：改为ENUM类型
+      allowNull: true,
+      defaultValue: 'SECRET',
+    },
     birthDate: {
       type: DATEONLY,
-      allowNull: false,
-      comment: '事件日期 (Event Date)',
+      allowNull: true, // 修正：改为允许NULL
+      field: 'birth_date',
     },
     avatar: {
       type: STRING(255),
+      allowNull: true,
     },
     email: {
       type: STRING(50),
@@ -33,6 +39,7 @@ module.exports = app => {
     },
     signature: {
       type: STRING(100),
+      allowNull: true,
     },
     accessGroup: {
       type: JSON,
@@ -41,25 +48,42 @@ module.exports = app => {
     },
     address: {
       type: STRING(255),
+      allowNull: true,
     },
     phone: {
       type: STRING(20),
-    },
-    // Sequ 不直接支持枚举类型，这是替代方案
-    gender: {
-      type: STRING(10),
+      allowNull: true,
     },
     tags: {
       type: JSON,
+      allowNull: true,
     },
     geographic: {
       type: JSON,
+      allowNull: true,
+    },
+    metaDigest: { // 新增字段
+      type: STRING(255),
+      allowNull: true,
+      field: 'meta_digest',
     },
     notifyCount: {
       type: INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+      field: 'notify_count',
     },
     unreadCount: {
       type: INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+      field: 'unread_count',
+    },
+    userState: { // 新增字段
+      type: ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING'),
+      allowNull: true,
+      defaultValue: 'PENDING',
+      field: 'user_state',
     },
   }, {
     freezeTableName: true,

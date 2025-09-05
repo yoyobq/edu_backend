@@ -186,37 +186,33 @@ class myCourseScheduleService extends Service {
         const lecturePlanId = newSourceMapData.LECTURE_PLAN_ID;
         const courseId = newSourceMapData.COURSE_ID;
 
-        console.log('处理 LECTURE_PLAN_ID:', lecturePlanId, 'COURSE_ID:', courseId);
-
         let existingSourceMap = null;
 
-        // 2.1 优先使用 LECTURE_PLAN_ID 检查重复
-        if (lecturePlanId) {
-          existingSourceMap = await this.ctx.model.Ssts.CourseScheduleSourceMap.findOne({
-            where: { LECTURE_PLAN_ID: lecturePlanId },
-            transaction: t,
-          });
-        } else if (courseId) {
-          // 2.2 如果 LECTURE_PLAN_ID 为空，则使用 COURSE_ID 检查重复
-          existingSourceMap = await this.ctx.model.Ssts.CourseScheduleSourceMap.findOne({
-            where: { COURSE_ID: courseId },
-            transaction: t,
-          });
-        }
+        // 总是用 courseId + teachingClassId + semesterId 查找数据库中的重复记录
+        existingSourceMap = await this.ctx.model.Ssts.CourseScheduleSourceMap.findOne({
+          where: {
+            COURSE_ID: courseId,
+            TEACHING_CLASS_ID: newSourceMapData.TEACHING_CLASS_ID,
+            semesterId: newSourceMapData.semesterId,
+          },
+          transaction: t,
+        });
 
-        // 2.3 如果找到已存在的记录，则在同一个事务中先删除旧记录
+        // 如果找到重复记录，且新数据有 lecturePlanId 而旧数据没有，则更新旧数据的 lecturePlanId
         if (existingSourceMap) {
-          console.log('找到已存在的记录，准备删除');
-          const oldSchedule = await existingSourceMap.getCourseSchedule({ transaction: t });
-          if (oldSchedule) {
-            await oldSchedule.destroy({ transaction: t });
+          if (lecturePlanId && !existingSourceMap.LECTURE_PLAN_ID) {
+            console.log('找到已存在的记录，更新 LECTURE_PLAN_ID');
+            await existingSourceMap.update({
+              LECTURE_PLAN_ID: lecturePlanId,
+            }, { transaction: t });
           }
+
+          // 如果找到重复记录，跳过创建新记录
+          continue;
         }
 
-        // 2.4 再创建新的 courseSchedule
+        // 只有当没有找到重复记录时，才创建新的记录
         const newSchedule = await this.ctx.model.Plan.CourseSchedule.create(item.courseSchedule, { transaction: t });
-
-        // 2.4 创建新的 sourceMap，并关联刚刚创建的 schedule ID
         await this.ctx.model.Ssts.CourseScheduleSourceMap.create({
           ...newSourceMapData,
           courseScheduleId: newSchedule.id,
